@@ -34,7 +34,7 @@ CREATE TABLE progress (
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   collection_id UUID REFERENCES collections(id) ON DELETE CASCADE,
   track_index INTEGER DEFAULT 0,
-  current_time REAL DEFAULT 0,
+  current_pos REAL DEFAULT 0, -- Renamed from current_time to avoid reserved keyword
   completed INTEGER DEFAULT 0,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (user_id, collection_id)

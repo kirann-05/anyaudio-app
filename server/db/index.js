@@ -80,7 +80,7 @@ async function getCollections(userId) {
     .select(`
       *,
       tracks (*),
-      progress:progress (track_index, current_time, completed)
+      progress:progress (track_index, current_pos, completed)
     `)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
@@ -92,7 +92,7 @@ async function getCollections(userId) {
     ...c,
     tracks: c.tracks.sort((a, b) => a.track_index - b.track_index),
     trackIndex: c.progress?.[0]?.track_index || 0,
-    currentTime: c.progress?.[0]?.current_time || 0,
+    currentTime: c.progress?.[0]?.current_pos || 0,
     completed: c.progress?.[0]?.completed || 0
   }));
 }
@@ -142,7 +142,7 @@ async function saveProgress(userId, collectionId, trackIndex, currentTime, compl
       user_id: userId,
       collection_id: collectionId,
       track_index: trackIndex,
-      current_time: currentTime,
+      current_pos: currentTime,
       completed,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,collection_id' });
