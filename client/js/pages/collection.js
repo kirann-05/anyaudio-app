@@ -8,6 +8,8 @@ import { state } from '../app.js';
 import * as api from '../services/api.js';
 import { audioEngine } from '../services/audio.js';
 import { storage } from '../services/storage.js';
+import { fsService } from '../services/fs.js';
+import { downloadManager } from '../services/downloadManager.js';
 
 // We keep a reference to the active collection to avoid reloading if it's the same
 let activeCollectionId = null;
@@ -104,14 +106,12 @@ function buildUI(container, col, progress) {
   downloadBtn.innerHTML = `${icons.download} <span>Download</span>`;
   
   downloadBtn.addEventListener('click', async () => {
-    const { fsService } = await import('../services/fs.js');
     if (!fsService.isReady) {
       showToast('Please connect a library folder first', 'info');
       await fsService.promptForDirectory();
     }
     if (fsService.isReady) {
       showToast('Starting download...', 'info');
-      const { downloadManager } = await import('../services/downloadManager.js');
       downloadManager.startDownload(col);
     }
   });

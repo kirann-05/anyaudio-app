@@ -55,8 +55,15 @@ class AudioEngine extends EventTarget {
     });
 
     this.audio.addEventListener('error', (e) => {
-      console.error('Audio error:', e);
+      console.error('Audio error:', this.audio.error?.message || 'unknown');
       this.emit('error', { error: this.audio.error });
+      // Auto-skip to next track after a failed load
+      setTimeout(() => {
+        if (this.currentIndex < this.tracks.length - 1) {
+          console.warn(`  ⏭ Skipping unplayable track ${this.currentIndex + 1}`);
+          this.next();
+        }
+      }, 1500);
     });
 
     this.audio.addEventListener('progress', () => {
@@ -99,7 +106,8 @@ class AudioEngine extends EventTarget {
     this.currentIndex = index;
     const track = this.tracks[index];
 
-    if (track.audioUrl) {
+    if (track.audioUrl || track.audio_url) {
+      const audioUrl = track.audioUrl || track.audio_url;
       if (track.downloaded && track.localFilename && fsService.isReady) {
         // Play local file
         const blobUrl = await fsService.getAudioFileUrl(track.localFilename);
@@ -107,11 +115,11 @@ class AudioEngine extends EventTarget {
           this.audio.src = blobUrl;
         } else {
           // Fallback to stream if local file missing
-          this.audio.src = getStreamUrl(track.audioUrl);
+          this.audio.src = getStreamUrl(audioUrl);
         }
       } else {
         // Stream online
-        this.audio.src = getStreamUrl(track.audioUrl);
+        this.audio.src = getStreamUrl(audioUrl);
       }
       
       if (startTime > 0) {

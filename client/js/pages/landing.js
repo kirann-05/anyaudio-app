@@ -3,6 +3,8 @@ import { state, navigate } from '../app.js';
 import * as api from '../services/api.js';
 import { icons } from '../utils/icons.js';
 import { refreshSidebarLibrary } from '../components/sidebar.js';
+import { fsService } from '../services/fs.js';
+import { downloadManager } from '../services/downloadManager.js';
 
 let cleanupGlobalListener = null;
 
@@ -50,7 +52,6 @@ export async function renderLanding(container) {
       showToast(`Found ${collection.tracks.length} tracks!`, 'success');
 
       if (offline) {
-        const { fsService } = await import('../services/fs.js');
         if (!fsService.isReady) {
           showToast('Please select a local folder for downloads first', 'info');
           const success = await fsService.promptForDirectory();
@@ -61,7 +62,6 @@ export async function renderLanding(container) {
         }
 
         showToast('Starting offline download...', 'info');
-        const { downloadManager } = await import('../services/downloadManager.js');
         downloadManager.startDownload(collection);
       }
 

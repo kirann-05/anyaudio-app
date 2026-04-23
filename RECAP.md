@@ -1,0 +1,96 @@
+# AnyAudio — Project Handoff & Technical Documentation
+
+## 1. Project Overview
+AnyAudio is a personal audio streaming and scraping application designed to turn any website with audio/video content into a private, mobile-friendly streaming library.
+
+*   **Frontend**: React (Vite) SPA, Vanilla CSS (Spotify-style aesthetics).
+*   **Backend**: Node.js (Express), Puppeteer (Scraping), Axios (Stream Proxying).
+*   **Database**: Hybrid System.
+    *   **Cloud**: Supabase (PostgreSQL) with RLS disabled for rapid dev.
+    *   **Local**: SQL.js (SQLite) with auto-fallback if environment variables are missing.
+*   **Deployment**: Render.com (Containerized via Docker).
+*   **Storage**: Browser OPFS (Origin Private File System) for offline track persistence.
+
+---
+
+## 2. Technical Architecture
+
+### Database Logic (`server/db/index.js`)
+The database service automatically detects its environment.
+- If `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are present, it uses cloud storage.
+- Otherwise, it falls back to `server/data/anyaudio.db` using `sql.js`.
+- **Note**: The schema includes `users`, `collections`, `tracks`, `progress`, and `playlists`.
+
+### Scraper Logic (`server/scraper/`)
+Uses Puppeteer to load pages and intercept network requests.
+- **Generic Strategy**: Intercepts `media` resources and searches the DOM for `<audio>`, `<video>`, and `<a>` links ending in media extensions.
+- **Filtering**: Filters out "noise" URLs containing words like `pixel`, `tracking`, `analytics`, or `status`.
+
+### Stream Proxy (`server/routes/api.js`)
+Proxies external audio streams through the backend to bypass CORS and Referer restrictions.
+- Client requests `ANYAUDIO_BACKEND_URL/api/stream?url=...`
+- Server sets appropriate `Range` headers for seekable playback.
+
+---
+
+## 3. Current Progress & Accomplishments
+
+### ✅ Deployment & Infrastructure
+- Successfully containerized the app. The `Dockerfile` handles Puppeteer system dependencies (`libnss3`, `libatk`, etc.).
+- Deployed to **Render.com** (current live URL: `https://anyaudio-app.onrender.com`).
+- Configured **Supabase** schema and fixed RLS permission issues.
+
+### ✅ Mobile UI/UX
+- Redesigned the header to include two primary action buttons: **"Stream Online"** and **"Save Offline"**.
+- Implemented a responsive layout where the sidebar hides on mobile, and the header stacks vertically.
+- Added icon-only modes for mobile headers to maximize screen space.
+
+### ✅ Local Development
+- Added an automatic SQLite fallback for local testing without cloud keys.
+- Fixed port conflicts by allowing `PORT=3002` configuration.
+
+---
+
+## 4. Known Issues & Critical Blockers
+
+### 🔴 Scraper Accuracy (The "Status" Bug)
+The generic scraper often picks up browser/network status messages (e.g., `success`, `failure`, `open`) as if they were tracks.
+- **Status**: Partially mitigated with keyword filtering, but needs a more robust media detection (e.g., checking content-length or headers via `HEAD` requests).
+
+### 🔴 YouTube Support
+The current scraper cannot handle YouTube directly because YouTube uses segmented DASH/HLS streams.
+- **Status**: The app currently treats YouTube pages as generic sites, which often results in 0 tracks found or picking up invalid tracking pixels.
+
+### 🔴 Stale Session IDs
+When switching between Cloud (Supabase) and Local (SQLite), the browser's `localStorage` often retains a stale `userId`.
+- **Symptom**: 404 or 500 errors on `/api/user/:id/collections` because the ID exists in the browser but not in the currently active database.
+- **Workaround**: Clear `localStorage` and re-login.
+
+### 🔴 Playback Failures
+Playback sometimes shows `0:00 / 0:00` if the proxy fails to resolve the URL or if the scraped URL is not a direct audio source.
+
+---
+
+## 5. Roadmap & Next Steps
+
+### Phase 1: Robust Scraping
+1.  **Refine Media Detection**: Move from extension-only matching to `HEAD` request validation in `generic.js`.
+2.  **YouTube Integration**: Integrate `yt-dlp` or a similar backend tool to extract real audio URLs from YouTube links.
+
+### Phase 2: Offline Stability
+1.  **Finalize OPFS Storage**: Ensure `client/js/services/fs.js` correctly handles multi-track downloads and handles storage quotas.
+2.  **Progress Sync**: Ensure offline progress is correctly synced back to the DB when the app comes back online.
+
+### Phase 3: Polish
+1.  **Track Metadata**: Use `music-metadata` on the backend to extract real titles/artists from proxied streams.
+2.  **Global Player**: Fix the "undefined" icon issues in the mobile layout (mostly fixed, but double-check `landing.js`).
+
+---
+
+## 6. Development Tips
+- **Backend Port**: Defaults to `3001`, but uses `3002` if `3001` is blocked.
+- **Vite Proxy**: Configured in `client/vite.config.js`. Ensure it points to the correct backend port.
+- **Testing**: Use a direct audio site like `https://oshoworld.com` for testing, as it has clean `.mp3` links.
+
+---
+*Generated by Antigravity AI — Pair Programming Session 2026-04-23*

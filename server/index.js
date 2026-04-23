@@ -21,15 +21,25 @@ app.use('/api', apiRoutes);
 // --------------- Static Frontend (Production) ---------------
 const publicPath = path.join(__dirname, 'public');
 app.use(express.static(publicPath));
+
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(publicPath, 'index.html'));
   }
 });
 
-// --------------- Initialize & Start ---------------
-initDB();
-
-app.listen(PORT, () => {
-  console.log(`\n  🎧 AnyAudio server running on http://localhost:${PORT}\n`);
+// --------------- Error Handling ---------------
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err.message);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
+
+// --------------- Initialize & Start ---------------
+(async () => {
+  await initDB();
+  app.listen(PORT, () => {
+    console.log(`\n  🎧 AnyAudio server running on http://localhost:${PORT}\n`);
+  });
+})();

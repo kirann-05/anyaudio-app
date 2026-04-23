@@ -1,10 +1,26 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
 
+const MEDIA_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma'];
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv'];
+const ALL_MEDIA_EXTENSIONS = [...MEDIA_EXTENSIONS, ...VIDEO_EXTENSIONS, '.m3u8'];
+
 /**
- * Generic website scraper using Puppeteer for JS-rendered sites.
- * Extracts all audio/video sources, track listings, and transcript content.
- * Handles pagination to collect ALL tracks from multi-page listings.
+ * Check if a URL's *path* ends with a known media extension.
+ */
+function hasMediaExtension(urlStr) {
+  try {
+    const pathname = new URL(urlStr).pathname.toLowerCase();
+    return ALL_MEDIA_EXTENSIONS.some(ext => pathname.endsWith(ext));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generic website scraper using Puppeteer.
+ * Handles: pages with <audio>/<video> players, direct .mp3 links, 
+ * data-src attributes, and network-intercepted media requests.
  */
 async function scrapeGeneric(url) {
   let browser;
@@ -23,27 +39,24 @@ async function scrapeGeneric(url) {
     });
 
     const page = await browser.newPage();
-
-    // Set a realistic viewport and user agent
     await page.setViewport({ width: 1366, height: 768 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-    // Intercept network requests to capture audio/video URLs
-    const networkAudioUrls = [];
+    // Network interception — capture real media URLs (path must end in media ext)
+    const networkMediaUrls = [];
     await page.setRequestInterception(true);
     page.on('request', (request) => {
-      const resourceUrl = request.url();
-      const resourceType = request.resourceType();
+      const rUrl = request.url();
+      const rType = request.resourceType();
 
-      // Capture audio/video network requests
-      if (resourceType === 'media' || isMediaUrl(resourceUrl)) {
-        networkAudioUrls.push(resourceUrl);
+      if (rType === 'media' || (hasMediaExtension(rUrl) && rType !== 'image')) {
+        networkMediaUrls.push(rUrl);
       }
 
-      // Block ads and trackers for faster loading
-      if (resourceType === 'image' || resourceUrl.includes('googlesyndication') ||
-          resourceUrl.includes('googletagmanager') || resourceUrl.includes('doubleclick') ||
-          resourceUrl.includes('facebook.net') || resourceUrl.includes('analytics')) {
+      // Block heavy resources for speed
+      if (rType === 'image' || rUrl.includes('googlesyndication') ||
+          rUrl.includes('googletagmanager') || rUrl.includes('doubleclick') ||
+          rUrl.includes('facebook.net')) {
         request.abort();
       } else {
         request.continue();
@@ -53,103 +66,111 @@ async function scrapeGeneric(url) {
     console.log('  📄 Loading page...');
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
 
-    // Wait a bit for dynamic content to render
-    await delay(3000);
+    // Wait for dynamic audio players to load (many sites inject <audio> via JS)
+    await delay(4000);
 
-    // Get the full rendered HTML
+    // CRITICAL: Extract audio sources from live DOM via Puppeteer (not cheerio)
+    // This catches dynamically-set src attributes that cheerio can't see
+    const liveAudioSources = await page.evaluate(() => {
+      const sources = [];
+      // <audio> elements
+      document.querySelectorAll('audio').forEach(el => {
+        if (el.src) sources.push(el.src);
+        if (el.currentSrc) sources.push(el.currentSrc);
+        if (el.dataset.src) sources.push(el.dataset.src);
+      });
+      // <source> inside audio/video
+      document.querySelectorAll('audio source, video source').forEach(el => {
+        if (el.src) sources.push(el.src);
+      });
+      // <video> elements
+      document.querySelectorAll('video').forEach(el => {
+        if (el.src) sources.push(el.src);
+        if (el.currentSrc) sources.push(el.currentSrc);
+      });
+      // data-src, data-url, data-audio, data-file on any element
+      document.querySelectorAll('[data-src], [data-url], [data-audio], [data-file]').forEach(el => {
+        const v = el.dataset.src || el.dataset.url || el.dataset.audio || el.dataset.file;
+        if (v) sources.push(v);
+      });
+      return sources;
+    });
+
+    // Resolve relative URLs from live sources
+    const resolvedLiveSources = liveAudioSources
+      .map(s => { try { return new URL(s, url).href; } catch { return s; } })
+      .filter(s => s.startsWith('http') && hasMediaExtension(s));
+
+    console.log(`  🔊 Live DOM audio sources: ${resolvedLiveSources.length}`);
+
+    // Now parse static HTML with cheerio for <a> links
     const html = await page.content();
     const pageTitle = await page.title();
-
-    // Extract data from the rendered page
     const $ = cheerio.load(html);
 
-    // Collect all audio/video sources from the DOM
-    const domAudioUrls = extractMediaFromDOM($, url);
+    const domLinkUrls = extractMediaLinksFromDOM($, url);
+    console.log(`  🔗 DOM link media: ${domLinkUrls.length}`);
 
-    // Combine network-intercepted and DOM-extracted audio URLs
-    const allAudioUrls = [...new Set([...networkAudioUrls, ...domAudioUrls])];
+    // Combine all sources
+    const allMediaUrls = [...new Set([...resolvedLiveSources, ...networkMediaUrls, ...domLinkUrls])];
+    console.log(`  📊 Total unique media URLs: ${allMediaUrls.length}`);
 
-    // Extract track listings (numbered lists, structured content)
-    const trackListings = extractTrackListings($, url);
+    // Build track list
+    const linkedTracks = extractLinkedTracks($, url);
+    let tracks = [];
 
-    // Extract page text content as transcript
-    const transcript = extractTranscript($);
-
-    // Try to find pagination and scrape all pages
-    const paginationLinks = extractPaginationLinks($, url);
-
-    let allTracks = [];
-
-    if (trackListings.length > 0) {
-      // We found structured track listings
-      allTracks = trackListings;
-    } else if (allAudioUrls.length > 0) {
-      // We found audio URLs but no structured listing
-      allTracks = allAudioUrls.map((audioUrl, i) => ({
-        id: i,
-        title: extractTitleFromUrl(audioUrl) || `Track ${i + 1}`,
-        audioUrl,
-        duration: null,
-        transcript: i === 0 ? transcript : null,
-      }));
+    if (linkedTracks.length > 0) {
+      // Prefer tracks found via <a> links (they have better titles)
+      tracks = linkedTracks;
     }
 
-    // If there are pagination links, scrape remaining pages
-    if (paginationLinks.length > 0) {
-      console.log(`  📑 Found ${paginationLinks.length} additional pages to scrape...`);
+    // Add any media URLs that aren't already in the linked tracks
+    const existingUrls = new Set(tracks.map(t => t.audioUrl));
+    allMediaUrls.forEach(mediaUrl => {
+      if (!existingUrls.has(mediaUrl)) {
+        tracks.push({
+          id: tracks.length,
+          title: titleFromUrl(mediaUrl) || `Track ${tracks.length + 1}`,
+          audioUrl: mediaUrl,
+          duration: null,
+        });
+      }
+    });
+
+    // Pagination
+    const paginationLinks = extractPaginationLinks($, url);
+    if (paginationLinks.length > 0 && tracks.length > 0) {
+      console.log(`  📑 Scraping ${paginationLinks.length} more pages...`);
       for (const pageUrl of paginationLinks) {
         try {
-          console.log(`  📄 Scraping page: ${pageUrl}`);
           await page.goto(pageUrl, { waitUntil: 'networkidle2', timeout: 30000 });
           await delay(2000);
-
-          const pageHtml = await page.content();
-          const $page = cheerio.load(pageHtml);
-
-          const pageTracks = extractTrackListings($page, pageUrl);
-          const pageAudioUrls = extractMediaFromDOM($page, pageUrl);
-          const pageNetworkUrls = [...networkAudioUrls]; // may have new ones
-
+          const $p = cheerio.load(await page.content());
+          const pageTracks = extractLinkedTracks($p, pageUrl);
           if (pageTracks.length > 0) {
-            allTracks.push(...pageTracks.map((t, i) => ({
-              ...t,
-              id: allTracks.length + i,
-            })));
-          } else if (pageAudioUrls.length > 0) {
-            allTracks.push(...pageAudioUrls.map((audioUrl, i) => ({
-              id: allTracks.length + i,
-              title: extractTitleFromUrl(audioUrl) || `Track ${allTracks.length + i + 1}`,
-              audioUrl,
-              duration: null,
-              transcript: null,
-            })));
+            tracks.push(...pageTracks.map((t, i) => ({ ...t, id: tracks.length + i })));
           }
-        } catch (pageErr) {
-          console.error(`  ⚠️ Failed to scrape page ${pageUrl}:`, pageErr.message);
+        } catch (e) {
+          console.warn(`  ⚠️ Page failed: ${e.message}`);
         }
       }
     }
 
-    // Deduplicate tracks by audioUrl
-    const uniqueTracks = [];
-    const seenUrls = new Set();
-    for (const track of allTracks) {
-      if (track.audioUrl && !seenUrls.has(track.audioUrl)) {
-        seenUrls.add(track.audioUrl);
-        uniqueTracks.push(track);
-      }
-    }
-    allTracks = uniqueTracks;
-
-    // Re-index track IDs
-    allTracks = allTracks.map((t, i) => ({ ...t, id: i }));
+    // Deduplicate and re-index
+    const seen = new Set();
+    tracks = tracks.filter(t => {
+      if (!t.audioUrl || seen.has(t.audioUrl)) return false;
+      seen.add(t.audioUrl);
+      return true;
+    }).map((t, i) => ({ ...t, id: i }));
 
     await browser.close();
 
+    console.log(`  ✅ Final track count: ${tracks.length}`);
     return {
       title: cleanTitle(pageTitle) || 'Untitled Collection',
       sourceUrl: url,
-      tracks: allTracks,
+      tracks,
     };
 
   } catch (err) {
@@ -158,190 +179,93 @@ async function scrapeGeneric(url) {
   }
 }
 
-// ===================== Helper Functions =====================
+// ===================== DOM Helpers =====================
 
-function isMediaUrl(url) {
-  const mediaExts = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.mp4', '.webm', '.m3u8'];
-  return mediaExts.some(ext => url.toLowerCase().includes(ext));
-}
+function extractMediaLinksFromDOM($, baseUrl) {
+  const urls = new Set();
 
-function extractMediaFromDOM($, baseUrl) {
-  const urls = [];
-
-  // <audio> and <video> src attributes
-  $('audio, video').each((_, el) => {
-    const src = $(el).attr('src');
-    if (src) urls.push(resolveUrl(src, baseUrl));
-  });
-
-  // <source> elements inside audio/video
-  $('source').each((_, el) => {
-    const src = $(el).attr('src');
-    if (src) urls.push(resolveUrl(src, baseUrl));
-  });
-
-  // Links to audio files
+  // <a> links to media files
   $('a[href]').each((_, el) => {
     const href = $(el).attr('href');
-    if (href && isMediaUrl(href)) {
-      urls.push(resolveUrl(href, baseUrl));
+    if (href && hasMediaExtension(resolve(href, baseUrl))) {
+      urls.add(resolve(href, baseUrl));
     }
   });
 
-  // data-src, data-url, data-audio attributes
-  $('[data-src], [data-url], [data-audio], [data-file]').each((_, el) => {
-    const dataSrc = $(el).attr('data-src') || $(el).attr('data-url') || $(el).attr('data-audio') || $(el).attr('data-file');
-    if (dataSrc && isMediaUrl(dataSrc)) {
-      urls.push(resolveUrl(dataSrc, baseUrl));
-    }
-  });
-
-  // iframes (may contain embedded players)
-  $('iframe[src]').each((_, el) => {
-    const src = $(el).attr('src');
-    if (src && (src.includes('youtube') || src.includes('soundcloud') || src.includes('spotify'))) {
-      urls.push(src);
-    }
-  });
-
-  return [...new Set(urls)].filter(u => u && u.startsWith('http'));
+  return [...urls];
 }
 
-function extractTrackListings($, baseUrl) {
+function extractLinkedTracks($, baseUrl) {
   const tracks = [];
+  const seen = new Set();
 
-  // Look for common track listing patterns
-  // Pattern 1: Links within list items or divs that contain audio references
-  $('a[href]').each((i, el) => {
+  $('a[href]').each((_, el) => {
     const $el = $(el);
     const href = $el.attr('href');
-    const text = $el.text().trim();
+    if (!href) return;
 
-    if (!href || !text) return;
+    const resolved = resolve(href, baseUrl);
+    if (!hasMediaExtension(resolved)) return;
+    if (seen.has(resolved)) return;
+    seen.add(resolved);
 
-    // Check if the link points to a page (not a direct media file)
-    // and has text that looks like a track name (numbered, discourse, chapter, etc.)
-    const looksLikeTrack = /^\d+[\.\)\-\s]|track|chapter|discourse|episode|part|lesson|lecture/i.test(text) ||
-                           /\d+/.test(text);
-
-    if (looksLikeTrack && text.length > 3 && text.length < 200) {
-      const resolvedHref = resolveUrl(href, baseUrl);
-      // If it's a media file link
-      if (isMediaUrl(href)) {
-        tracks.push({
-          id: tracks.length,
-          title: cleanTrackTitle(text),
-          audioUrl: resolvedHref,
-          duration: null,
-          transcript: null,
-        });
-      }
+    let text = $el.text().trim();
+    if (!text || text.length < 2) {
+      text = $el.closest('li, tr, div').text().trim();
     }
+    const title = cleanTrackTitle(text) || titleFromUrl(resolved) || `Track ${tracks.length + 1}`;
+
+    tracks.push({ id: tracks.length, title, audioUrl: resolved, duration: null });
   });
 
   return tracks;
 }
 
-function extractTranscript($) {
-  // Remove scripts, styles, nav, header, footer, ads
-  $('script, style, nav, header, footer, .ad, .ads, .advertisement, [class*="sidebar"], [class*="comment"], [id*="comment"]').remove();
-
-  // Try to find the main content area
-  const mainSelectors = ['article', 'main', '.content', '.post-content', '.entry-content', '#content', '.article-body', '.discourse-text', '.transcript'];
-  let text = '';
-
-  for (const selector of mainSelectors) {
-    const el = $(selector);
-    if (el.length > 0) {
-      text = el.text().trim();
-      if (text.length > 100) break;
-    }
-  }
-
-  // Fallback to body text
-  if (text.length < 100) {
-    text = $('body').text().trim();
-  }
-
-  // Clean up whitespace
-  text = text.replace(/\s+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-
-  return text.length > 50 ? text : null;
-}
-
 function extractPaginationLinks($, baseUrl) {
-  const links = [];
-  const seen = new Set();
-
-  // Common pagination patterns
-  const paginationSelectors = [
-    '.pagination a',
-    '.pager a',
-    '.page-numbers a',
-    'nav.pagination a',
-    '.wp-pagenavi a',
-    'a.page-link',
-    '[class*="pagination"] a',
-    '[class*="paging"] a',
-    'a[href*="page="]',
-    'a[href*="page/"]',
-    'a[href*="pg="]',
-    '.next a',
-    'a.next',
-    'a[rel="next"]',
+  const links = new Set();
+  const selectors = [
+    '.pagination a', '.pager a', '.page-numbers a', 'nav.pagination a',
+    '.wp-pagenavi a', 'a.page-link', '[class*="pagination"] a',
+    'a[href*="page/"]', 'a[rel="next"]',
   ];
-
-  for (const selector of paginationSelectors) {
-    $(selector).each((_, el) => {
+  for (const sel of selectors) {
+    $(sel).each((_, el) => {
       const href = $(el).attr('href');
       if (href) {
-        const resolved = resolveUrl(href, baseUrl);
-        if (!seen.has(resolved) && resolved !== baseUrl) {
-          seen.add(resolved);
-          links.push(resolved);
-        }
+        const r = resolve(href, baseUrl);
+        if (r !== baseUrl) links.add(r);
       }
     });
   }
-
-  return links;
+  return [...links];
 }
 
-function resolveUrl(url, baseUrl) {
-  try {
-    return new URL(url, baseUrl).href;
-  } catch {
-    return url;
-  }
+// ===================== Utilities =====================
+
+function resolve(url, base) {
+  try { return new URL(url, base).href; } catch { return url; }
 }
 
 function cleanTitle(title) {
   if (!title) return '';
-  return title
-    .replace(/\s*[-|–]\s*(osho\s*world|home|page).*/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return title.replace(/\s*[-|–].*$/i, '').replace(/\s+/g, ' ').trim();
 }
 
 function cleanTrackTitle(text) {
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/^\d+[\.\)\-\s]+/, (match) => match) // keep numbering
-    .trim();
+  if (!text) return '';
+  const clean = text.replace(/\s+/g, ' ').trim();
+  return clean.length > 2 && clean.length < 200 ? clean : '';
 }
 
-function extractTitleFromUrl(url) {
+function titleFromUrl(url) {
   try {
-    const pathname = new URL(url).pathname;
-    const filename = decodeURIComponent(pathname.split('/').pop() || '');
+    const filename = decodeURIComponent(new URL(url).pathname.split('/').pop() || '');
     return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').trim() || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(r => setTimeout(r, ms));
 }
 
 module.exports = { scrapeGeneric };

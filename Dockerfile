@@ -8,7 +8,7 @@ RUN cd client && npm install && npm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Install Puppeteer dependencies for Debian Bookworm
+# Install Puppeteer dependencies + Python (for yt-dlp)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
@@ -46,7 +46,12 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     wget \
     xdg-utils \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install yt-dlp for streaming platform support (YouTube, SoundCloud, etc.)
+RUN pip3 install --break-system-packages yt-dlp
 
 # Install dependencies for server
 COPY server/package*.json ./server/

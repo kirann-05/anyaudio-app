@@ -197,14 +197,28 @@ router.get('/stream', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: 'url query param is required' });
 
-    const decodedUrl = decodeURIComponent(url);
+    let decodedUrl = decodeURIComponent(url);
+
+    // Handle ytdlp:// scheme — resolve real stream URL on the fly
+    if (decodedUrl.startsWith('ytdlp://')) {
+      const videoUrl = decodedUrl.replace('ytdlp://', '');
+      console.log(`  🎬 Resolving yt-dlp stream for: ${videoUrl}`);
+      try {
+        const { getStreamUrl } = require('../scraper/strategies/streaming');
+        decodedUrl = await getStreamUrl(videoUrl);
+        console.log(`  ✅ Resolved to: ${decodedUrl.substring(0, 80)}...`);
+      } catch (err) {
+        console.error('  ❌ yt-dlp resolve failed:', err.message);
+        return res.status(502).json({ error: 'Failed to resolve stream URL' });
+      }
+    }
 
     const headers = {};
     if (req.headers.range) {
       headers.Range = req.headers.range;
     }
     headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    headers['Referer'] = new URL(decodedUrl).origin;
+    try { headers['Referer'] = new URL(decodedUrl).origin; } catch {}
 
     const response = await axios({
       method: 'get',

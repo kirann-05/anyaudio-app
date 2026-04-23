@@ -4,6 +4,7 @@
 
 import { storage } from './services/storage.js';
 import { fsService } from './services/fs.js';
+import * as api from './services/api.js';
 import { el } from './utils/dom.js';
 import { icons } from './utils/icons.js';
 import { renderSidebar, updateSidebarActiveNav } from './components/sidebar.js';
@@ -38,11 +39,19 @@ async function handleRoute() {
   const route = getRoute();
   const root = document.getElementById('app');
 
-  // Check auth
+  // Check auth — validate stored session against backend
   if (!state.user) {
     const session = storage.getSession();
-    if (session) {
-      state.user = session;
+    if (session && session.id) {
+      try {
+        await api.getCollections(session.id); // lightweight validation
+        state.user = session;
+      } catch {
+        // Session is stale (user doesn't exist in current DB)
+        storage.clearSession();
+        renderLoginModal(root);
+        return;
+      }
     } else {
       renderLoginModal(root);
       return;
@@ -192,13 +201,11 @@ function renderLoginModal(root) {
     loginBtn.innerHTML = 'Logging in...';
 
     try {
-      const { login } = await import('./services/api.js');
-      const user = await login(username);
+      const user = await api.login(username);
       state.user = user;
       storage.setSession(user);
       
       // Attempt to load the File System silently, but don't block
-      const { fsService } = await import('./services/fs.js');
       await fsService.init();
 
       handleRoute();
