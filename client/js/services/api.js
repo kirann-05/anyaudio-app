@@ -32,6 +32,10 @@ export async function login(username) {
   });
 }
 
+export async function getUser(userId) {
+  return fetchJSON(`/api/user/${userId}`);
+}
+
 // ===================== Scrape =====================
 export async function scrapeUrl(url, userId) {
   return fetchJSON('/api/scrape', {

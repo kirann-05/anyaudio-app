@@ -29,6 +29,17 @@ router.post('/user/login', async (req, res) => {
   }
 });
 
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const user = await getUser(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    console.error('Get user error:', err);
+    res.status(500).json({ error: 'Failed to get user' });
+  }
+});
+
 // ===================== Scrape =====================
 router.post('/scrape', async (req, res) => {
   try {
@@ -206,11 +217,17 @@ router.get('/stream', async (req, res) => {
       try {
         const { getStreamUrl } = require('../scraper/strategies/streaming');
         decodedUrl = await getStreamUrl(videoUrl);
+        if (!decodedUrl) throw new Error('Resolved URL is empty');
         console.log(`  ✅ Resolved to: ${decodedUrl.substring(0, 80)}...`);
       } catch (err) {
         console.error('  ❌ yt-dlp resolve failed:', err.message);
-        return res.status(502).json({ error: 'Failed to resolve stream URL' });
+        return res.status(502).json({ error: 'Failed to resolve stream URL: ' + err.message });
       }
+    }
+
+    if (!decodedUrl || !decodedUrl.startsWith('http')) {
+      console.error('  ❌ Invalid stream URL:', decodedUrl);
+      return res.status(400).json({ error: 'Invalid stream URL' });
     }
 
     const headers = {};
@@ -247,9 +264,10 @@ router.get('/stream', async (req, res) => {
       response.data.destroy();
     });
   } catch (err) {
-    console.error('Stream error:', err.message);
+    console.error('  ❌ Stream error for', req.query.url, ':', err.message);
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Failed to stream: ' + err.message });
+      const statusCode = err.response?.status || 500;
+      res.status(statusCode).json({ error: 'Failed to stream: ' + err.message });
     }
   }
 });

@@ -44,10 +44,10 @@ async function handleRoute() {
     const session = storage.getSession();
     if (session && session.id) {
       try {
-        await api.getCollections(session.id); // lightweight validation
+        await api.getUser(session.id); // validate session
         state.user = session;
       } catch {
-        // Session is stale (user doesn't exist in current DB)
+        // Session is stale or user doesn't exist
         storage.clearSession();
         renderLoginModal(root);
         return;

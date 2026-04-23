@@ -1,9 +1,12 @@
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio');
+const axios = require('axios');
 
 const MEDIA_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma'];
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv'];
 const ALL_MEDIA_EXTENSIONS = [...MEDIA_EXTENSIONS, ...VIDEO_EXTENSIONS, '.m3u8'];
+
+const NOISE_KEYWORDS = ['pixel', 'tracking', 'analytics', 'status', 'success', 'failure', 'open', 'ping', 'log', 'telemetry'];
 
 /**
  * Check if a URL's *path* ends with a known media extension.
@@ -14,6 +17,45 @@ function hasMediaExtension(urlStr) {
     return ALL_MEDIA_EXTENSIONS.some(ext => pathname.endsWith(ext));
   } catch {
     return false;
+  }
+}
+
+/**
+ * Perform a HEAD request to verify if a URL is actually a media file.
+ */
+async function isValidMediaUrl(urlStr) {
+  try {
+    const lowUrl = urlStr.toLowerCase();
+    
+    // 1. Keyword filter (fast)
+    if (NOISE_KEYWORDS.some(k => lowUrl.includes(k))) return false;
+
+    // 2. Head request validation
+    const response = await axios.head(urlStr, { 
+      timeout: 5000, 
+      headers: { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': new URL(urlStr).origin
+      },
+      validateStatus: false // Don't throw on 404, etc.
+    });
+    
+    const contentType = (response.headers['content-type'] || '').toLowerCase();
+    const isMedia = contentType.startsWith('audio/') || 
+                    contentType.startsWith('video/') || 
+                    contentType.includes('mpegurl') || 
+                    contentType.includes('application/x-mpegurl') ||
+                    contentType.includes('octet-stream'); // Some servers use this for mp3
+
+    if (isMedia) return true;
+
+    // 3. Fallback: If HEAD failed or returned generic type, but extension is very specific
+    if (hasMediaExtension(urlStr)) return true;
+
+    return false;
+  } catch (err) {
+    // If HEAD fails (e.g. 405 Method Not Allowed), fallback to extension check
+    return hasMediaExtension(urlStr);
   }
 }
 
@@ -112,8 +154,17 @@ async function scrapeGeneric(url) {
     console.log(`  🔗 DOM link media: ${domLinkUrls.length}`);
 
     // Combine all sources
-    const allMediaUrls = [...new Set([...resolvedLiveSources, ...networkMediaUrls, ...domLinkUrls])];
-    console.log(`  📊 Total unique media URLs: ${allMediaUrls.length}`);
+    const rawMediaUrls = [...new Set([...resolvedLiveSources, ...networkMediaUrls, ...domLinkUrls])];
+    console.log(`  📊 Found ${rawMediaUrls.length} potential media URLs. Validating...`);
+
+    // Validate URLs in parallel (with concurrency limit if needed, but let's do Promise.all for now)
+    const validationResults = await Promise.all(rawMediaUrls.map(async (u) => ({
+      url: u,
+      isValid: await isValidMediaUrl(u)
+    })));
+
+    const allMediaUrls = validationResults.filter(r => r.isValid).map(r => r.url);
+    console.log(`  ✅ ${allMediaUrls.length} unique media URLs passed validation.`);
 
     // Build track list
     const linkedTracks = extractLinkedTracks($, url);
