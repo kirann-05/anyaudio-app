@@ -65,17 +65,23 @@ async function handleRoute() {
     // Header inside main viewport
     const header = el('div', { className: 'main-header' });
     header.innerHTML = `
-      <div class="header-search" style="display:flex;align-items:center;gap:8px;flex:1;">
-        ${icons.search}
-        <input type="text" class="input" id="global-url-input" placeholder="Paste a website URL or audio link to scrape..." autocomplete="off" />
-        <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem;color:var(--text-secondary);cursor:pointer;margin-left:12px;white-space:nowrap;">
-          <input type="checkbox" id="global-download-offline" style="accent-color:var(--accent);width:16px;height:16px;" />
-          Download Offline
-        </label>
+      <div class="header-search" style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;">
+        <div style="position:relative; flex:1; min-width:200px;">
+          <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none;">${icons.search}</div>
+          <input type="text" class="input" id="global-url-input" placeholder="Paste link..." autocomplete="off" style="padding-left:40px; width:100%;" />
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" id="fetch-stream-btn" style="padding:8px 16px; border-radius:var(--radius-full); font-size:0.875rem; border:1px solid rgba(255,255,255,0.1);">
+            Stream Online
+          </button>
+          <button class="btn btn-accent" id="fetch-download-btn" style="padding:8px 16px; border-radius:var(--radius-full); font-size:0.875rem; display:flex; align-items:center; gap:6px;">
+            ${icons.download} Save Offline
+          </button>
+        </div>
       </div>
-      <div class="header-user" style="display:flex; align-items:center; gap:12px;">
+      <div class="header-user" style="display:flex; align-items:center; gap:12px; margin-left:16px;">
         <button class="btn btn-ghost btn-sm" id="connect-folder-header-btn" title="Connect Local Folder" style="padding:8px; display:flex; align-items:center; gap:6px;">
-          ${icons.folder} <span style="font-size:0.75rem; font-weight:500;">Connect Folder</span>
+          ${icons.folder} <span class="hide-on-mobile" style="font-size:0.75rem; font-weight:500;">Connect Folder</span>
         </button>
         <div class="user-avatar">${state.user.username.charAt(0).toUpperCase()}</div>
       </div>
@@ -97,19 +103,26 @@ async function handleRoute() {
     root.appendChild(appGrid);
     isAppInitialized = true;
 
-    // Global URL Input handler (routes to landing page logic)
+    // Global URL Input handler
     const urlInput = document.getElementById('global-url-input');
-    urlInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const url = urlInput.value.trim();
-        const offline = document.getElementById('global-download-offline').checked;
-        if (url) {
-          urlInput.value = '';
-          navigate('');
-          setTimeout(() => window.dispatchEvent(new CustomEvent('global-url-submit', { detail: { url, offline } })), 50);
-        }
+    const streamBtn = document.getElementById('fetch-stream-btn');
+    const downloadBtn = document.getElementById('fetch-download-btn');
+
+    const triggerScrape = (offline = false) => {
+      const url = urlInput.value.trim();
+      if (url) {
+        urlInput.value = '';
+        navigate('');
+        setTimeout(() => window.dispatchEvent(new CustomEvent('global-url-submit', { detail: { url, offline } })), 50);
       }
+    };
+
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') triggerScrape(false);
     });
+
+    streamBtn.addEventListener('click', () => triggerScrape(false));
+    downloadBtn.addEventListener('click', () => triggerScrape(true));
 
     // Folder connection button in header
     const folderBtn = document.getElementById('connect-folder-header-btn');

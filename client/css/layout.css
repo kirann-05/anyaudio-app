@@ -178,10 +178,10 @@
 
 .header-search {
   flex: 1;
-  max-width: 400px;
   position: relative;
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .header-search svg {
@@ -483,6 +483,20 @@
   .player-info { width: auto; max-width: 150px; }
   .player-actions { display: none; }
   .player-controls { width: auto; flex: 1; justify-content: flex-end; }
+  
+  .main-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .header-search {
+    max-width: none;
+  }
+  
+  .hide-on-mobile {
+    display: none !important;
+  }
 }
 
 /* Typography & specific overrides */
