@@ -1,0 +1,16 @@
+{
+  "name": "anyaudio-client",
+  "version": "1.0.0",
+  "description": "AnyAudio frontend",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.3.4"
+  },
+  "dependencies": {
+    "idb-keyval": "^6.2.2"
+  }
+}
