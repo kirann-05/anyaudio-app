@@ -2,7 +2,7 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials missing. App will fail on DB operations.');
@@ -17,22 +17,30 @@ async function initDB() {
 
 // User
 async function getOrCreateUser(username) {
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .single();
+  try {
+    const { data: existingUser, error: searchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle(); // Better than single() if it might not exist
 
-  if (existingUser) return existingUser;
+    if (existingUser) return existingUser;
 
-  const { data: newUser, error } = await supabase
-    .from('users')
-    .insert([{ username }])
-    .select()
-    .single();
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([{ username }])
+      .select()
+      .single();
 
-  if (error) throw error;
-  return newUser;
+    if (insertError) {
+      console.error('Supabase Insert Error:', insertError);
+      throw insertError;
+    }
+    return newUser;
+  } catch (err) {
+    console.error('DB Error in getOrCreateUser:', err);
+    throw err;
+  }
 }
 
 async function getUser(id) {
