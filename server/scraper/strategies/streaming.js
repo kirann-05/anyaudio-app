@@ -128,4 +128,4 @@ async function getStreamUrl(videoUrl) {
   }
 }
 
-module.exports = { scrapeStreaming, getStreamUrl };
+module.exports = { scrapeStreaming, getStreamUrl, runYtDlp };

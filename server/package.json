@@ -17,6 +17,8 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "puppeteer": "^22.12.0",
+    "spotify-url-info": "^3.3.0",
+    "spottydl": "^0.2.7",
     "sql.js": "^1.14.1",
     "uuid": "^10.0.0"
   },

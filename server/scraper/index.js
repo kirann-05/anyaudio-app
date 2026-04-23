@@ -1,6 +1,7 @@
 const { scrapeGeneric } = require('./strategies/generic');
 const { scrapeDirect } = require('./strategies/direct');
 const { scrapeStreaming } = require('./strategies/streaming');
+const { scrapeSpotify } = require('./strategies/spotify');
 
 // Direct media file extensions
 const MEDIA_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma', '.mp4', '.webm', '.mkv'];
@@ -10,7 +11,6 @@ const STREAMING_DOMAINS = [
   'youtube.com', 'youtu.be', 'youtube-nocookie.com',  // YouTube
   'music.youtube.com',                                  // YouTube Music
   'soundcloud.com',                                     // SoundCloud
-  'open.spotify.com',                                   // Spotify
   'bandcamp.com',                                       // Bandcamp
   'vimeo.com',                                          // Vimeo
   'dailymotion.com',                                    // Dailymotion
@@ -43,6 +43,11 @@ async function scrape(url) {
     if (isStreaming) {
       console.log(`  🎬 Streaming platform detected: ${hostname}`);
       return await scrapeStreaming(url);
+    }
+
+    // 2b. Spotify Special Handling
+    if (hostname.includes('open.spotify.com')) {
+      return await scrapeSpotify(url);
     }
 
     // 3. Generic website (Puppeteer)
