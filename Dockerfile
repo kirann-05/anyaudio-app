@@ -1,10 +1,9 @@
 # Build Stage for Frontend
 FROM node:20-slim AS frontend-build
-WORKDIR /app/client
-COPY client/package*.json ./
-RUN npm install
-COPY client/ .
-RUN npm run build
+WORKDIR /app
+# Copy only the client folder for the build stage
+COPY client/ ./client/
+RUN cd client && npm install && npm run build
 
 # Final Stage
 FROM node:20-slim
@@ -31,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
-    libpango-1.0-0 \
+    libpango-1-0-0 \
     libpangocairo-1.0-0 \
     libstdc++6 \
     libx11-6 \
@@ -65,7 +64,7 @@ COPY --from=frontend-build /app/client/dist ./server/public
 # Set environment variables
 ENV PORT=8080
 ENV NODE_ENV=production
-# Tell Puppeteer to use the installed Chromium
+# Force Puppeteer to download Chromium during install
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 
 EXPOSE 8080
