@@ -42,7 +42,8 @@ export async function renderLanding(container) {
     // Show scraping status
     statusArea.innerHTML = '';
     const status = el('div', { className: 'scraping-status', style: { borderRadius:'var(--radius-full)' } });
-    status.innerHTML = `<div class="loading-spinner" style="width:20px;height:20px;border-width:2px;"></div><span>Scraping content from URL...</span>`;
+    const isPlaylist = url.includes('list=') || url.includes('/playlist/') || url.includes('/album/');
+    status.innerHTML = `<div class="loading-spinner" style="width:20px;height:20px;border-width:2px;"></div><span>${isPlaylist ? 'Importing playlist tracks...' : 'Scraping content from URL...'}</span>`;
     statusArea.appendChild(status);
 
     try {

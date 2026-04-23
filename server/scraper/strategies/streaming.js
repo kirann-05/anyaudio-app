@@ -99,7 +99,13 @@ async function scrapeStreaming(url) {
 
   } catch (err) {
     console.error('  ❌ yt-dlp error:', err.message);
-    throw new Error('Failed to extract from streaming URL: ' + err.message);
+    let msg = 'Failed to extract from streaming URL.';
+    if (err.message.includes('The playlist does not exist')) {
+      msg = 'The YouTube playlist does not exist or is private.';
+    } else if (err.message.includes('Sign in to confirm you’re not a bot')) {
+      msg = 'YouTube is blocking the request (Bot detection).';
+    }
+    throw new Error(msg);
   }
 }
 
