@@ -1,7 +1,6 @@
 # Build Stage for Frontend
 FROM node:20-slim AS frontend-build
 WORKDIR /app
-# Copy only the client folder for the build stage
 COPY client/ ./client/
 RUN cd client && npm install && npm run build
 
@@ -9,7 +8,7 @@ RUN cd client && npm install && npm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Install Puppeteer dependencies
+# Install Puppeteer dependencies for Debian Bookworm
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
@@ -24,13 +23,11 @@ RUN apt-get update && apt-get install -y \
     libfontconfig1 \
     libgbm1 \
     libgcc1 \
-    libgconf-2-4 \
-    libgdk-pixbuf2.0-0 \
     libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
-    libpango-1-0-0 \
+    libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libstdc++6 \
     libx11-6 \
@@ -64,8 +61,6 @@ COPY --from=frontend-build /app/client/dist ./server/public
 # Set environment variables
 ENV PORT=8080
 ENV NODE_ENV=production
-# Force Puppeteer to download Chromium during install
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 
 EXPOSE 8080
 
