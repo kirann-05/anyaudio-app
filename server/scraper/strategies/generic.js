@@ -157,11 +157,23 @@ async function scrapeGeneric(url) {
     const rawMediaUrls = [...new Set([...resolvedLiveSources, ...networkMediaUrls, ...domLinkUrls])];
     console.log(`  📊 Found ${rawMediaUrls.length} potential media URLs. Validating...`);
 
-    // Validate URLs in parallel (with concurrency limit if needed, but let's do Promise.all for now)
-    const validationResults = await Promise.all(rawMediaUrls.map(async (u) => ({
-      url: u,
-      isValid: await isValidMediaUrl(u)
-    })));
+    // Extract Transcript (main paragraphs)
+    let transcript = '';
+    $('p').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 50) { // Only take substantial paragraphs
+        transcript += text + '\n\n';
+      }
+    });
+    if (transcript.length < 100) transcript = null;
+    if (transcript) console.log(`  📝 Extracted transcript (${Math.round(transcript.length / 1024)} KB)`);
+
+    // Validate URLs in parallel with concurrency limit or just fast-track known extensions
+    const validationResults = await Promise.all(rawMediaUrls.map(async (u) => {
+      // FAST TRACK: If it clearly ends in .mp3, .m4a, etc, just accept it to save time
+      if (hasMediaExtension(u)) return { url: u, isValid: true };
+      return { url: u, isValid: await isValidMediaUrl(u) };
+    }));
 
     const allMediaUrls = validationResults.filter(r => r.isValid).map(r => r.url);
     console.log(`  ✅ ${allMediaUrls.length} unique media URLs passed validation.`);
@@ -214,6 +226,11 @@ async function scrapeGeneric(url) {
       seen.add(t.audioUrl);
       return true;
     }).map((t, i) => ({ ...t, id: i }));
+
+    // Assign transcript to the first track
+    if (tracks.length > 0 && transcript) {
+      tracks[0].transcript = transcript;
+    }
 
     await browser.close();
 

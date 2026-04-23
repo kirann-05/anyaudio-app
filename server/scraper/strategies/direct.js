@@ -51,6 +51,7 @@ async function scrapeDirect(url) {
         duration: duration,
         contentType,
         fileSize,
+        transcript: null,
       }],
     };
   } catch (err) {
@@ -67,6 +68,7 @@ async function scrapeDirect(url) {
         title: title,
         audioUrl: url,
         duration: null,
+        transcript: null,
       }],
     };
   }

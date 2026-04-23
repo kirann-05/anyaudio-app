@@ -24,7 +24,7 @@ let db = null;
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE)",
   "CREATE TABLE IF NOT EXISTS collections (id TEXT PRIMARY KEY, user_id TEXT, url TEXT, title TEXT, updated_at TEXT)",
-  "CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, collection_id TEXT, track_index INTEGER, title TEXT, audio_url TEXT, duration INTEGER, downloaded BOOLEAN DEFAULT 0, local_filename TEXT)",
+  "CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, collection_id TEXT, track_index INTEGER, title TEXT, audio_url TEXT, duration INTEGER, downloaded BOOLEAN DEFAULT 0, local_filename TEXT, transcript TEXT)",
   "CREATE TABLE IF NOT EXISTS progress (user_id TEXT, collection_id TEXT, track_index INTEGER, current_time REAL, completed INTEGER DEFAULT 0, updated_at TEXT, PRIMARY KEY (user_id, collection_id))",
   "CREATE TABLE IF NOT EXISTS playlists (id TEXT PRIMARY KEY, user_id TEXT, name TEXT, description TEXT, updated_at TEXT)",
   "CREATE TABLE IF NOT EXISTS playlist_tracks (id TEXT PRIMARY KEY, playlist_id TEXT, collection_id TEXT, track_index INTEGER, added_at TEXT)",
@@ -101,15 +101,15 @@ async function saveCollection(userId, url, title, tracks) {
     db.run("INSERT INTO collections (id, user_id, url, title, updated_at) VALUES (?, ?, ?, ?, ?)",
       [colId, userId, url, title, new Date().toISOString()]);
     tracks.forEach((t, i) => {
-      db.run("INSERT INTO tracks (id, collection_id, track_index, title, audio_url, duration, downloaded) VALUES (?, ?, ?, ?, ?, ?, 0)",
-        [genId(), colId, i, t.title, t.audioUrl, t.duration || 0]);
+      db.run("INSERT INTO tracks (id, collection_id, track_index, title, audio_url, duration, downloaded, transcript) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
+        [genId(), colId, i, t.title, t.audioUrl, t.duration || 0, t.transcript || null]);
     });
     saveLocalDB();
     return getCollection(colId);
   }
   const { data: col, error: colErr } = await supabase.from('collections').insert([{ user_id: userId, url, title }]).select().single();
   if (colErr) throw colErr;
-  const rows = tracks.map((t, i) => ({ collection_id: col.id, track_index: i, title: t.title, audio_url: t.audioUrl, duration: t.duration || 0, downloaded: false }));
+  const rows = tracks.map((t, i) => ({ collection_id: col.id, track_index: i, title: t.title, audio_url: t.audioUrl, duration: t.duration || 0, downloaded: false, transcript: t.transcript || null }));
   const { error: trErr } = await supabase.from('tracks').insert(rows);
   if (trErr) throw trErr;
   return getCollection(col.id);
@@ -119,11 +119,11 @@ async function getCollections(userId) {
   if (useLocal) {
     const cols = query("SELECT id, user_id, url, title, updated_at FROM collections WHERE user_id = ? ORDER BY updated_at DESC", [userId]);
     return cols.map(r => {
-      const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename FROM tracks WHERE collection_id = ? ORDER BY track_index", [r[0]]);
+      const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [r[0]]);
       const pr = query("SELECT track_index, current_time, completed FROM progress WHERE user_id = ? AND collection_id = ?", [userId, r[0]]);
       return {
         id: r[0], user_id: r[1], url: r[2], title: r[3], updated_at: r[4],
-        tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7] })),
+        tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7], transcript: t[8] })),
         trackIndex: pr[0]?.[0] || 0, currentTime: pr[0]?.[1] || 0, completed: pr[0]?.[2] || 0,
       };
     });
@@ -144,10 +144,10 @@ async function getCollection(id) {
     const cols = query("SELECT id, user_id, url, title, updated_at FROM collections WHERE id = ?", [id]);
     if (cols.length === 0) return null;
     const r = cols[0];
-    const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename FROM tracks WHERE collection_id = ? ORDER BY track_index", [id]);
+    const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [id]);
     return {
       id: r[0], user_id: r[1], url: r[2], title: r[3], updated_at: r[4],
-      tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7] })),
+      tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7], transcript: t[8] })),
     };
   }
   const { data, error } = await supabase.from('collections').select('*, tracks (*)').eq('id', id).single();

@@ -120,9 +120,8 @@ function buildUI(container, col, progress) {
   container.appendChild(actionRow);
 
   // Track List Header
-  const listHeader = el('div', { style: { display: 'grid', gridTemplateColumns: '16px 40px 1fr 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
+  const listHeader = el('div', { style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
   listHeader.innerHTML = `
-    <div></div>
     <div style="text-align:right;">#</div>
     <div>Title</div>
     <div></div>
@@ -140,15 +139,12 @@ function buildUI(container, col, progress) {
     
     const item = el('div', { 
       className: `sidebar-item ${isPlayingThis ? 'active' : ''}`, 
-      style: { padding: '12px 16px', borderRadius: '4px', display: 'grid', gridTemplateColumns: '16px 40px 1fr 60px', gap: '16px', alignItems: 'center' }
+      style: { padding: '12px 16px', borderRadius: '4px', display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', alignItems: 'center' }
     });
-    
-    const statusIcon = done ? `<span style="color:var(--success);">${icons.circleCheck}</span>` : cur ? `<span style="color:var(--accent);">${icons.circleHalf}</span>` : `<span style="color:var(--text-muted);">${icons.circle}</span>`;
     
     const isDownloaded = t.downloaded === 1 || t.downloaded === true;
     
     item.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;width:16px;height:16px;">${statusIcon}</div>
       <div style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;">${isPlayingThis ? `<span style="color:var(--accent);">${icons.music}</span>` : i+1}</div>
       <div style="color:${isPlayingThis ? 'var(--accent)' : 'var(--text-primary)'}; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:8px;">
         ${esc(t.title)}
