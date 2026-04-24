@@ -191,6 +191,22 @@ export default function App() {
     }
   };
 
+  const handleUpdateCollection = async (id: string, data: any) => {
+    try {
+      const { updateCollection, getCollection } = await import('./services/api');
+      await updateCollection(id, data);
+      
+      // Update local state immediately
+      if (selectedCollection && selectedCollection.id === id) {
+        const updated = await getCollection(id);
+        setSelectedCollection(updated);
+      }
+      fetchCollections();
+    } catch (err) {
+      console.error('Update failed:', err);
+    }
+  };
+
   // Sync state with audio engine
   useEffect(() => {
     import('./services/audioEngine').then(({ audioEngine }) => {
@@ -213,7 +229,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background bg-noise">
-      <TopBar onProfileClick={() => handleTabChange('profile')} />
+      <TopBar 
+        onProfileClick={() => handleTabChange('profile')} 
+        onImport={() => setIsImportModalOpen(true)}
+      />
       <Sidebar activeTab={activeTab} onTabChange={handleTabChange} userName={userName} />
       
       <main className="lg:pl-80 transition-all duration-300 min-h-screen flex flex-col">
@@ -230,6 +249,7 @@ export default function App() {
                 collection={selectedCollection} 
                 onBack={() => setSelectedCollection(null)}
                 onTrackSelect={handleTrackSelect}
+                onUpdateCollection={handleUpdateCollection}
                 currentTrackId={currentTrack?.id}
               />
             </motion.div>

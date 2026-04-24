@@ -1,4 +1,4 @@
-import { Play, Shuffle, Download, ArrowLeft, MoreVertical, CheckCircle2, Clock } from 'lucide-react';
+import { Play, Shuffle, Download, ArrowLeft, MoreVertical, CheckCircle2, Clock, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Collection, Track } from '../types';
 
@@ -6,6 +6,7 @@ interface CollectionDetailProps {
   collection: Collection;
   onBack: () => void;
   onTrackSelect: (track: Track) => void;
+  onUpdateCollection?: (id: string, data: any) => void;
   currentTrackId?: string;
 }
 
@@ -29,9 +30,25 @@ export function CollectionDetailScreen({ collection, onBack, onTrackSelect, curr
         <div className="relative z-10 flex flex-col md:flex-row items-end gap-10">
           <motion.div 
             layoutId={`image-${collection.id}`}
-            className="w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl shrink-0 border border-white/10"
+            className="group relative w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-2xl shrink-0 border border-white/10"
           >
-            <img src={collection.coverArt} alt={collection.title} className="w-full h-full object-cover" />
+            <img src={collection.coverArt} alt={collection.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            
+            {/* Change Cover Button */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <button 
+                onClick={() => {
+                  const url = window.prompt('Enter new cover art URL:', collection.coverArt);
+                  if (url && url !== collection.coverArt) {
+                    onUpdateCollection?.(collection.id, { coverArt: url });
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-white font-mono text-[10px] uppercase font-bold tracking-widest border border-white/20 hover:bg-white/20 transition-all"
+              >
+                <ImageIcon size={14} />
+                Change Cover
+              </button>
+            </div>
           </motion.div>
           
           <div className="flex-1 w-full">

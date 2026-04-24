@@ -57,18 +57,23 @@ export function Sidebar({ activeTab, onTabChange, userName = 'Audiophile Member'
 
 interface TopBarProps {
   onProfileClick?: () => void;
+  onImport?: () => void;
 }
 
-export function TopBar({ onProfileClick }: TopBarProps) {
+export function TopBar({ onProfileClick, onImport }: TopBarProps) {
   return (
     <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center lg:left-80 lg:w-[calc(100%-20rem)]">
       <div className="flex items-center gap-4">
-        <button className="lg:hidden p-2 text-primary hover:text-primary/80 transition-colors">
-          <Menu size={24} />
-        </button>
         <h1 className="text-2xl font-bold text-primary tracking-tighter font-display text-glow uppercase">AnyAudio</h1>
       </div>
       <div className="flex items-center gap-4">
+        <button 
+          onClick={onImport}
+          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-on-surface hover:text-primary hover:border-primary/50 transition-all group active:scale-95"
+        >
+          <Search size={18} className="group-hover:rotate-12 transition-transform" />
+          <span className="font-mono text-[10px] uppercase font-bold tracking-[0.2em]">Import</span>
+        </button>
         <button 
           onClick={onProfileClick}
           className="p-2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 group"
