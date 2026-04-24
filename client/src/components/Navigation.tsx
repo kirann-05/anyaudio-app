@@ -5,9 +5,10 @@ import { motion } from 'motion/react';
 interface NavigationProps {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
+  userName?: string;
 }
 
-export function Sidebar({ activeTab, onTabChange }: NavigationProps) {
+export function Sidebar({ activeTab, onTabChange, userName = 'Audiophile Member' }: NavigationProps) {
   const items = [
     { id: 'listen', icon: Headphones, label: 'Discovery' },
     { id: 'explore', icon: Search, label: 'Explore' }, // Using Search icon for explore per screenshot visual style
@@ -25,7 +26,7 @@ export function Sidebar({ activeTab, onTabChange }: NavigationProps) {
           />
         </div>
         <div>
-          <div className="text-primary font-bold">Audiophile Member</div>
+          <div className="text-primary font-bold truncate max-w-[150px]">{userName}</div>
           <div className="text-sm text-on-surface-variant">Premium Plan</div>
         </div>
       </div>
@@ -54,7 +55,11 @@ export function Sidebar({ activeTab, onTabChange }: NavigationProps) {
   );
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onProfileClick?: () => void;
+}
+
+export function TopBar({ onProfileClick }: TopBarProps) {
   return (
     <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center lg:left-80 lg:w-[calc(100%-20rem)]">
       <div className="flex items-center gap-4">
@@ -64,8 +69,12 @@ export function TopBar() {
         <h1 className="text-2xl font-bold text-primary tracking-tighter font-display text-glow uppercase">AnyAudio</h1>
       </div>
       <div className="flex items-center gap-4">
-        <button className="p-2 text-on-surface-variant hover:text-primary transition-colors">
-           <User size={24} />
+        <button 
+          onClick={onProfileClick}
+          className="p-2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 group"
+        >
+           <User size={24} className="group-hover:scale-110 transition-transform" />
+           <span className="hidden sm:inline font-mono text-[10px] uppercase font-bold tracking-widest">Profile</span>
         </button>
       </div>
     </header>

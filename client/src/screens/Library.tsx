@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Download, Play, WifiOff } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Download, Play, WifiOff, AlertCircle, RefreshCw, SortAsc, Filter as FilterIcon } from 'lucide-react';
 import { Collection } from '../types';
 import { MOCK_COLLECTIONS } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,15 +9,47 @@ interface LibraryProps {
   onCollectionSelect: (collection: Collection) => void;
 }
 
+type SortOption = 'title' | 'artist' | 'date';
+
 export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSelect }: LibraryProps) {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('title');
+  const [filterQuery, setFilterQuery] = useState('');
+  const [downloadErrors, setDownloadErrors] = useState<Record<string, boolean>>({
+    'c2': true // Mock an error for demo
+  });
 
-  const filteredCollections = isOfflineMode 
-    ? collections.filter(c => 
-        // For demo: if any track is downloaded, show the collection
-        c.tracks?.some(t => t.isDownloaded) || c.id === 'c3' // c3 is specifically unreleased local
-      )
-    : collections;
+  const processedCollections = useMemo(() => {
+    let result = isOfflineMode 
+      ? collections.filter(c => 
+          c.tracks?.some(t => t.isDownloaded) || c.id === 'c3'
+        )
+      : collections;
+
+    if (filterQuery) {
+      const query = filterQuery.toLowerCase();
+      result = result.filter(c => 
+        c.title.toLowerCase().includes(query) || 
+        c.subtitle.toLowerCase().includes(query)
+      );
+    }
+
+    return [...result].sort((a, b) => {
+      if (sortBy === 'title') return a.title.localeCompare(b.title);
+      if (sortBy === 'artist') return a.subtitle.localeCompare(b.subtitle);
+      // Mock date sort since collections don't have dates, using ID as proxy for demo
+      return b.id.localeCompare(a.id);
+    });
+  }, [collections, isOfflineMode, sortBy, filterQuery]);
+
+  const handleRetryDownload = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDownloadErrors(prev => ({ ...prev, [id]: false }));
+    // Mock successful retry after a delay
+    setTimeout(() => {
+      // In a real app, this would trigger the actual download
+    }, 1500);
+  };
 
   return (
     <div className="flex-1 px-6 lg:px-12 pt-28 pb-32 max-w-7xl mx-auto w-full">
@@ -27,7 +59,8 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
           <p className="font-body text-on-surface-variant">Your saved collections, mixes, and deep dives.</p>
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-6">
+          {/* Offline Toggle */}
           <div className="flex items-center gap-3">
             <span className={`font-mono text-[10px] uppercase font-bold tracking-widest transition-colors ${isOfflineMode ? 'text-primary' : 'text-on-surface-variant'}`}>
               Offline Mode
@@ -48,15 +81,6 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
                 }`}
               />
             </button>
-            {isOfflineMode && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-primary"
-              >
-                <WifiOff size={16} />
-              </motion.div>
-            )}
           </div>
           
           <button className="flex items-center gap-2 px-6 py-3 rounded-full glass-panel hover:bg-white/10 hover:scale-105 transition-all text-on-surface font-mono text-sm uppercase tracking-widest border border-white/10">
@@ -66,9 +90,38 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
         </div>
       </div>
 
+      {/* Sort & Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-4 glass-panel rounded-2xl border border-white/5">
+        <div className="flex items-center gap-4 flex-1 min-w-[200px]">
+          <div className="relative flex-1 max-w-xs">
+            <FilterIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+            <input 
+              type="text"
+              placeholder="Filter library..."
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-xs font-mono focus:outline-none focus:border-primary/50 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <SortAsc size={14} className="text-on-surface-variant" />
+          <select 
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="bg-transparent text-on-surface font-mono text-[10px] uppercase tracking-widest focus:outline-none cursor-pointer hover:text-primary transition-colors pr-2"
+          >
+            <option value="title" className="bg-background">Sort by Title</option>
+            <option value="artist" className="bg-background">Sort by Artist</option>
+            <option value="date" className="bg-background">Sort by Date</option>
+          </select>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <AnimatePresence mode="popLayout">
-          {filteredCollections.map((collection, index) => (
+          {processedCollections.map((collection, index) => (
             <motion.article
               key={collection.id}
               layout
@@ -86,9 +139,23 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
                 
-                {collection.tracks.some(t => t.isDownloaded) && (
+                {collection.tracks?.some(t => t.isDownloaded) && !downloadErrors[collection.id] && (
                    <div className="absolute top-3 right-3 bg-tertiary/20 backdrop-blur-md p-1.5 rounded-full text-tertiary border border-tertiary/30">
                     <Download size={14} />
+                  </div>
+                )}
+
+                {downloadErrors[collection.id] && (
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                    <AlertCircle size={32} className="text-red-400 mb-2" />
+                    <span className="text-[10px] font-mono text-red-100 uppercase tracking-widest mb-4 font-bold">Download Failed</span>
+                    <button 
+                      onClick={(e) => handleRetryDownload(e, collection.id)}
+                      className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white font-mono text-[9px] uppercase tracking-[0.2em] flex items-center gap-2 transition-all"
+                    >
+                      <RefreshCw size={12} />
+                      Retry
+                    </button>
                   </div>
                 )}
 
@@ -120,22 +187,24 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
                 </p>
               </div>
 
-              <button className="absolute top-6 right-6 z-30 w-12 h-12 rounded-full bg-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all shadow-[0_10px_20px_rgba(245,158,11,0.4)]">
-                <Play size={24} fill="black" className="text-black ml-1" />
-              </button>
+              {!downloadErrors[collection.id] && (
+                <button className="absolute top-6 right-6 z-30 w-12 h-12 rounded-full bg-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all shadow-[0_10px_20px_rgba(245,158,11,0.4)]">
+                  <Play size={24} fill="black" className="text-black ml-1" />
+                </button>
+              )}
             </motion.article>
           ))}
         </AnimatePresence>
       </div>
       
-      {filteredCollections.length === 0 && (
+      {processedCollections.length === 0 && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="flex flex-col items-center justify-center py-20 text-on-surface-variant"
         >
           <WifiOff size={48} className="mb-4 opacity-20" />
-          <p className="font-mono uppercase tracking-[0.2em]">No offline content found</p>
+          <p className="font-mono uppercase tracking-[0.2em]">No matches found in library</p>
         </motion.div>
       )}
     </div>

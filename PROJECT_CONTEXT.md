@@ -4,14 +4,17 @@
 AnyAudio is a high-performance, multi-source media aggregation platform designed to consolidate audio content from diverse sources (Spotify, YouTube, Archive.org, Osho World, and generic websites) into a unified, premium listening experience. It specializes in handling "long-form" content like spiritual discourses and podcasts, alongside music.
 
 ## 2. Technical Stack
-- **Frontend**: Vanilla JavaScript (ES6+), CSS3 (Custom Design System), SPA architecture with a custom hash-based router.
+- **Frontend**: **React (Vite)** with Tailwind CSS and Framer Motion. 
+    - Architecture: Component-based SPA with state-driven UI.
+    - Design: High-fidelity visual design generated via Google AI Studio.
 - **Backend**: Node.js with Express.
 - **Database**: Hybrid architecture using **SQLite** for local persistence/offline and **Supabase** for remote synchronization.
 - **Media Engine**: 
     - **yt-dlp**: For high-quality stream resolution and metadata extraction.
+    - **youtube-sr**: For fetching native YouTube recommendation algorithms.
     - **Puppeteer**: For dynamic scraping of JavaScript-heavy sites (Spotify, Osho World).
     - **Cheerio**: For fast static HTML parsing and JSON-LD metadata extraction.
-- **Audio Core**: Custom Web Audio API wrapper with progress persistence and offline download management (FileSystem API).
+- **Audio Core**: Custom Web Audio API wrapper with progress persistence, offline download management (FileSystem API), and **Algorithmic Endless Play**.
 
 ## 3. Core Architecture
 ### Server Side (`/server`)
@@ -19,30 +22,27 @@ AnyAudio is a high-performance, multi-source media aggregation platform designed
 - `scraper/index.js`: Strategy-based router that detects domains and dispatches to specialized modules.
 - `scraper/strategies/`:
     - `spotify.js`: Uses Puppeteer with stealth headers to resolve playlists via YouTube search.
-    - `oshoworld.js`: High-latency specialist for legacy spiritual archives; extracts transcripts and multi-part tracks.
+    - `oshoworld.js`: High-latency specialist for legacy spiritual archives.
     - `streaming.js`: Wrapper for yt-dlp.
     - `generic.js`: "Smart" scraper using OpenGraph, JSON-LD, and DOM heuristics.
 - `db/index.js`: Abstracted database layer handling SQLite schema migrations and Supabase sync.
 
 ### Client Side (`/client`)
-- `app.js`: Main entry point and router.
-- `services/audio.js`: Robust audio engine with state management and event emitters.
-- `services/downloadManager.js`: Handles background downloads to local storage.
-- `pages/`: Component-based view rendering (Landing, Collection, Player).
-- `css/index.css`: Comprehensive design system using HSL tokens, glassmorphism, and custom animations.
+- **Modern React App**: Located in `/client`. Built using Vite.
+- **Legacy Client**: Original vanilla JS implementation moved to `/client_legacy` for reference.
+- `src/services/audioEngine.ts`: Robust audio engine with state management, event emitters, and YouTube recommendation integration.
+- `src/services/api.ts`: Centralized API bridge between React UI and Node.js backend.
+- `src/screens/`: React components for Library, Discovery, Collection Details, and Player.
 
-## 4. Current State of UI/UX
-- **Theme**: Premium Dark Amber. Uses deep blues (`#0a0c14`) and warm golds (`#f59e0b`).
-- **Layout**: Fixed sidebar for library access, persistent bottom player, and dynamic main viewport.
-- **Key Components**:
-    - **Premium Covers**: Dynamic CSS fallback covers with textured gradients and high-contrast typography.
-    - **Transcripts**: Integrated right-sidebar for long-form content reading during playback.
-    - **Progress Tracking**: Per-track and per-collection progress indicators.
+## 4. Key Features & Integrations
+- **YouTube Endless Play**: Uses `youtube-sr` on the backend to fetch true "Up Next" recommendations. When a track ends, the engine automatically scrapes and queues the next algorithmic recommendation for a seamless radio experience.
+- **Resilient Deployment**: Server logic in `index.js` automatically detects whether to serve from a production `dist` build or raw source, preventing `ENOENT` crashes on platforms like Render.
+- **Hybrid DB Persistence**: Automatically saves scraping results to Supabase/SQLite so your library grows with every new URL you listen to.
 
 ## 5. Engineering Focus
-- **Robust Scrapers**: Maintaining high-stealth Puppeteer and yt-dlp configurations.
-- **Hybrid DB**: Ensuring seamless SQLite-to-Supabase synchronization.
-- **Audio Reliability**: Optimizing stream proxy and offline file management.
+- **UI Integrity**: Strict "no-touch" policy on AI-generated CSS/Layout to preserve design fidelity.
+- **Algorithmic Flow**: Optimizing the handoff between "Track End" and "Next Recommendation Scrape" to minimize latency.
+- **Scraper Stealth**: Maintaining high-stealth Puppeteer and yt-dlp configurations.
 
 ---
-*Prepared by Antigravity (Advanced Agentic Coding).*
+*Updated by Antigravity (Advanced Agentic Coding) — 2026-04-24.*

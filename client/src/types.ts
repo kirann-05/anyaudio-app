@@ -9,9 +9,18 @@ export type Track = {
   progress?: number; // 0 to 1
   timeLeft?: string;
   status?: 'played' | 'playing' | 'paused' | 'new';
+  downloadStatus?: 'idle' | 'downloading' | 'error' | 'success';
+  dateDownloaded?: string; // ISO string
   lyrics?: string[];
   genre?: string;
   mood?: string;
+};
+
+export type UserStats = {
+  minutesListened: number;
+  tracksPlayed: number;
+  topGenre: string;
+  joinDate: string;
 };
 
 export type Collection = {
@@ -25,4 +34,4 @@ export type Collection = {
   isNew?: boolean;
 };
 
-export type AppTab = 'listen' | 'explore' | 'library' | 'search';
+export type AppTab = 'listen' | 'explore' | 'library' | 'search' | 'profile';

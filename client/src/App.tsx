@@ -3,12 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sidebar, TopBar, BottomNav } from './components/Navigation';
 import { PlayerPreview } from './components/PlayerPreview';
@@ -16,10 +11,21 @@ import { LibraryScreen } from './screens/Library';
 import { DiscoveryScreen } from './screens/Discovery';
 import { CollectionDetailScreen } from './screens/CollectionDetail';
 import { PlayerScreen } from './screens/Player';
-import { AppTab, Collection, Track } from './types';
-import { MOCK_COLLECTIONS, MOCK_TRACKS } from './constants';
+import { LoginScreen } from './screens/Login';
+import { ProfileScreen } from './screens/Profile';
+import { AppTab, Collection, Track, UserStats } from './types';
+import { MOCK_COLLECTIONS } from './constants';
+
+const MOCK_USER_STATS: UserStats = {
+  minutesListened: 14520,
+  tracksPlayed: 842,
+  topGenre: 'Ambient',
+  joinDate: 'Oct 2025'
+};
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState('');
   const [activeTab, setActiveTab] = useState<AppTab>('library');
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null); 
@@ -30,12 +36,24 @@ export default function App() {
   
   // Link to backend
   useEffect(() => {
+    if (!isLoggedIn) return;
     import('./services/api').then(({ getCollections }) => {
       getCollections('user123').then((data: any) => {
         if (data && data.length > 0) setCollections(data);
       }).catch(console.error);
     });
-  }, []);
+  }, [isLoggedIn]);
+
+  const handleLogin = (name: string) => {
+    setUserName(name);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserName('');
+    setIsPlayerOpen(false);
+  };
 
   const handleTabChange = (tab: AppTab) => {
     setActiveTab(tab);
@@ -80,10 +98,14 @@ export default function App() {
     });
   }, []);
 
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen bg-background bg-noise">
-      <TopBar />
-      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
+      <TopBar onProfileClick={() => handleTabChange('profile')} />
+      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} userName={userName} />
       
       <main className="lg:pl-80 transition-all duration-300 min-h-screen flex flex-col">
         <AnimatePresence mode="wait">
@@ -117,6 +139,13 @@ export default function App() {
                 <div className="flex-1 flex items-center justify-center p-12 text-on-surface-variant font-mono uppercase tracking-[0.3em]">
                   Premium Features Coming Soon
                 </div>
+              )}
+              {activeTab === 'profile' && (
+                <ProfileScreen 
+                  userName={userName} 
+                  stats={MOCK_USER_STATS} 
+                  onLogout={handleLogout}
+                />
               )}
             </motion.div>
           )}
