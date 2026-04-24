@@ -58,4 +58,23 @@
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
+
+  /* Mobile UX Optimizations */
+  @media (max-width: 768px) {
+    html {
+      font-size: 14px;
+    }
+    
+    .glass-panel, .glass-card {
+      @apply border-white/5;
+    }
+
+    section {
+      @apply mb-8;
+    }
+
+    h1, h2 {
+      @apply tracking-tight;
+    }
+  }
 }

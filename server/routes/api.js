@@ -293,7 +293,7 @@ router.get('/stream', async (req, res) => {
       url: decodedUrl,
       responseType: 'stream',
       headers,
-      timeout: 30000,
+      timeout: 60000,
     });
 
     const forwardHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges'];

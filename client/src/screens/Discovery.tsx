@@ -1,63 +1,48 @@
 import { useState, useEffect } from 'react';
-import { Search, Mic, Play, Filter, Hash, Sparkles, Clock, Loader2 } from 'lucide-react';
+import { Search, Play, Filter, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { EXPLORE_MOCKED_MIXES } from '../constants';
 
 interface DiscoveryProps {
-  onImport?: () => void;
+  onImport: () => void;
   onPlayTrack?: (track: any) => void;
   initialArtists?: any[];
   initialRecommendations?: any[];
   isLoading?: boolean;
 }
 
-export function DiscoveryScreen({ 
-  onImport, 
-  onPlayTrack, 
-  initialArtists = [], 
-  initialRecommendations = [], 
-  isLoading: isParentLoading = false 
-}: DiscoveryProps) {
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+export function DiscoveryScreen({ onImport, onPlayTrack, initialArtists = [], initialRecommendations = [], isLoading = false }: DiscoveryProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchStatus, setSearchStatus] = useState<'idle' | 'searching' | 'results'>('idle');
   const [trendingArtists, setTrendingArtists] = useState<any[]>(initialArtists);
   const [recommendations, setRecommendations] = useState<any[]>(initialRecommendations);
-  const [isLoading, setIsLoading] = useState(isParentLoading);
+  const [activeFilters, setActiveFilters] = useState<string[]>(['Trending']);
+  const [searchStatus, setSearchStatus] = useState<'idle' | 'searching' | 'results'>('idle');
 
-  // Sync with parent data if it changes
   useEffect(() => {
-    if (searchStatus === 'idle') {
-      setTrendingArtists(initialArtists);
-      setRecommendations(initialRecommendations);
-      setIsLoading(isParentLoading);
-    }
-  }, [initialArtists, initialRecommendations, isParentLoading, searchStatus]);
+    if (initialArtists.length > 0) setTrendingArtists(initialArtists);
+    if (initialRecommendations.length > 0) setRecommendations(initialRecommendations);
+  }, [initialArtists, initialRecommendations]);
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) return;
-    
-    setIsLoading(true);
+    if (!searchQuery.trim()) return;
+
     setSearchStatus('searching');
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        setRecommendations(data.map((m: any, idx: number) => ({
-          title: m.title,
-          tag: 'SEARCH RESULT',
-          description: m.uploader || 'Found on AnyAudio',
-          image: m.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
-          url: m.url
+      const { search } = await import('../services/api');
+      const results = await search(searchQuery);
+      if (results) {
+        setRecommendations(results.map((r: any, idx: number) => ({
+          title: r.title,
+          tag: 'RESULT',
+          description: r.artist || r.uploader || 'Found on Web',
+          image: r.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
+          url: r.url,
+          audioUrl: r.audioUrl || r.url
         })));
         setSearchStatus('results');
       }
     } catch (err) {
       console.error('Search failed:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -68,141 +53,103 @@ export function DiscoveryScreen({
   };
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto pt-28 pb-32 md:pb-16 px-6 lg:px-12 w-full">
+    <div className="flex-1 max-w-7xl mx-auto pt-24 pb-32 md:pb-16 px-4 md:px-12 w-full">
       {/* Universal Search Bar */}
-      <div className="flex flex-col items-center mb-16 gap-6">
-        <form onSubmit={handleSearch} className="relative w-full max-w-3xl group">
-          <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
-            <Search size={24} />
-          </div>
+      <section className="mb-10 flex flex-col items-center">
+        <form onSubmit={handleSearch} className="relative w-full max-w-2xl group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors" size={18} />
           <input 
-            type="text" 
-            placeholder="Search artists, podcasts, or moods..."
+            id="discovery-search"
+            type="text"
+            placeholder="Search artists, tracks, or podcasts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full glass-panel rounded-full py-5 pl-16 pr-40 text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)] font-body text-lg"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-24 text-sm font-body focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all shadow-2xl"
           />
-          <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
-            <button 
-              type="submit"
-              className="px-4 py-2 rounded-full bg-primary text-on-primary hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all font-mono text-[10px] uppercase tracking-widest font-bold"
-            >
-              Search
-            </button>
-            <button 
-              type="button"
-              onClick={onImport}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-mono text-[10px] uppercase tracking-widest font-bold"
-            >
-              <Play size={14} fill="currentColor" />
-              Import
-            </button>
-          </div>
-        </form>
-
-        {/* Filter Bar */}
-        <div className="flex items-center gap-3 overflow-x-auto no-scrollbar max-w-full px-4">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-on-surface-variant hover:text-primary transition-colors">
-            <Filter size={14} />
-            <span className="font-mono text-[10px] uppercase font-bold tracking-widest">Filters</span>
+          <button 
+            type="submit"
+            disabled={isLoading || searchStatus === 'searching'}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-on-primary px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isLoading || searchStatus === 'searching' ? <Loader2 size={16} className="animate-spin" /> : 'Search'}
           </button>
-          
-          {['Ambient', 'Focus', 'Electronic', 'Long Form', 'Calm', 'Podcast'].map((filter) => (
+        </form>
+        
+        {/* Quick Filters */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
+          {['Trending', 'Deep Focus', 'Energy', 'Relax', 'Podcasts'].map((filter) => (
             <button 
               key={filter}
               onClick={() => toggleFilter(filter)}
-              className={`flex-shrink-0 px-5 py-2 rounded-full border transition-all font-mono text-[10px] uppercase tracking-widest font-bold ${
-                activeFilters.includes(filter)
-                  ? 'bg-primary text-on-primary border-primary shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                  : 'glass-panel text-on-surface-variant hover:text-primary border-white/10'
+              className={`px-4 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-widest transition-all border ${
+                activeFilters.includes(filter) 
+                  ? 'bg-primary text-on-primary border-primary shadow-[0_0_15px_rgba(245,158,11,0.3)]' 
+                  : 'bg-white/5 text-on-surface-variant border-white/10 hover:bg-white/10'
               }`}
             >
               {filter}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Trending Artists */}
-      <section className="mb-20">
-        <h2 className="font-display text-2xl text-on-surface mb-8 font-bold tracking-tight uppercase tracking-[0.2em]">Trending Artists</h2>
-        <div className="flex overflow-x-auto no-scrollbar gap-8 pb-4">
-          {trendingArtists.length > 0 ? trendingArtists.map((artist, i) => (
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display text-lg md:text-2xl text-on-surface font-bold tracking-[0.2em] uppercase">Trending Artists</h2>
+          <button className="text-primary font-mono text-[10px] uppercase tracking-widest hover:underline">View All</button>
+        </div>
+        <div className="flex overflow-x-auto gap-6 pb-4 hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+          {trendingArtists.map((artist, idx) => (
             <motion.div 
-              key={i}
-              whileHover={{ scale: 1.05 }}
-              className="flex flex-col items-center gap-4 cursor-pointer group shrink-0"
-              onClick={() => onPlayTrack?.({ title: artist.name, artist: artist.name, image: artist.image, audioUrl: artist.url })}
+              key={idx}
+              whileHover={{ y: -5 }}
+              onClick={() => onPlayTrack?.({ title: artist.name, artist: 'Artist Mix', image: artist.image, audioUrl: artist.url })}
+              className="flex flex-col items-center gap-3 shrink-0 cursor-pointer group"
             >
-              <div className="relative w-28 h-28 rounded-full p-[1px] bg-gradient-to-b from-white/20 to-transparent group-hover:from-primary/60 transition-all duration-500">
-                <div className="w-full h-full rounded-full overflow-hidden relative border border-white/5 bg-surface-container shadow-xl">
-                  <img 
-                    src={artist.image} 
-                    alt={artist.name} 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
-                </div>
-                <div className="absolute bottom-0 right-0 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-on-primary shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                   <Play size={18} fill="black" />
+              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-white/5 group-hover:border-primary/50 transition-all shadow-xl">
+                <img src={artist.image} alt={artist.name} className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500" />
+                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Play size={24} fill="white" className="text-white" />
                 </div>
               </div>
-              <span className="font-mono text-[10px] text-on-surface-variant group-hover:text-white uppercase tracking-widest text-center max-w-[120px] truncate font-bold">
-                {artist.name}
-              </span>
+              <span className="font-body text-xs md:text-sm text-on-surface font-medium group-hover:text-primary transition-colors text-center w-24 truncate">{artist.name}</span>
             </motion.div>
-          )) : (
-            [1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="w-28 h-28 rounded-full bg-white/5 animate-pulse shrink-0" />
-            ))
-          )}
+          ))}
         </div>
       </section>
 
-      {/* Curated for You */}
-      <section>
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-2xl text-on-surface font-bold tracking-tight uppercase tracking-[0.2em]">
-            {searchStatus === 'results' ? `Search Results: ${searchQuery}` : 'Curated for You'}
+      {/* Curated for You / Search Results */}
+      <section className="pb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display text-lg md:text-2xl text-on-surface font-bold tracking-[0.2em] uppercase">
+            {searchStatus === 'results' ? 'Results' : 'Curated for You'}
           </h2>
-          {isLoading && <Loader2 size={20} className="animate-spin text-primary opacity-50" />}
+          {(isLoading || searchStatus === 'searching') && <Loader2 size={18} className="animate-spin text-primary opacity-50" />}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {recommendations.length > 0 ? recommendations.map((mix, idx) => (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+          {recommendations.map((item, idx) => (
             <motion.div 
               key={idx}
-              whileHover={{ y: -8 }}
-              className={`group relative block rounded-[32px] overflow-hidden glass-panel transition-all duration-500 ${
-                idx === 2 ? 'md:col-span-2 lg:col-span-1' : ''
-              } aspect-[4/5] cursor-pointer shadow-2xl border border-white/5`}
-              onClick={() => onPlayTrack?.({ title: mix.title, artist: mix.description, image: mix.image, audioUrl: mix.url })}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+              onClick={() => onPlayTrack?.({ title: item.title, artist: item.description, image: item.image, audioUrl: item.url })}
+              className="glass-card group p-3 md:p-5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all border border-white/5"
             >
-              <img 
-                src={mix.image} 
-                alt={mix.title} 
-                referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000 mix-blend-overlay"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
-              
-              <div className="absolute inset-0 z-10 flex flex-col justify-end p-8">
-                <span className="inline-block px-3 py-1 mb-4 rounded-full bg-white/10 backdrop-blur-md border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
-                  {mix.tag}
-                </span>
-                <h3 className="font-display text-3xl text-white mb-3 group-hover:text-primary transition-colors font-bold line-clamp-2 leading-tight">
-                  {mix.title}
-                </h3>
-                <p className="font-body text-white/60 line-clamp-2 text-sm">
-                  {mix.description}
-                </p>
+              <div className="relative aspect-square rounded-xl overflow-hidden mb-4 shadow-lg">
+                <img referrerPolicy="no-referrer" src={item.image} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Play size={32} fill="white" className="text-white" />
+                </div>
+                <div className="absolute top-2 left-2 bg-primary/90 text-on-primary text-[8px] md:text-[10px] px-2 py-1 rounded-md font-bold tracking-widest uppercase">
+                  {item.tag}
+                </div>
               </div>
+              <h3 className="font-display text-sm md:text-lg text-on-surface font-bold line-clamp-1 mb-1 group-hover:text-primary transition-colors">{item.title}</h3>
+              <p className="font-body text-[10px] md:text-xs text-on-surface-variant line-clamp-1 uppercase tracking-wider">{item.description}</p>
             </motion.div>
-          )) : (
-            [1, 2, 3].map(i => (
-              <div key={i} className="aspect-[4/5] rounded-[32px] bg-white/5 animate-pulse" />
-            ))
-          )}
+          ))}
         </div>
       </section>
     </div>

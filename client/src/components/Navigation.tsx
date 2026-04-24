@@ -60,26 +60,32 @@ interface TopBarProps {
   onImport?: () => void;
 }
 
-export function TopBar({ onProfileClick, onImport }: TopBarProps) {
+export function TopBar({ onProfileClick, onImport, onSearchClick }: TopBarProps & { onSearchClick?: () => void }) {
   return (
-    <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center lg:left-80 lg:w-[calc(100%-20rem)]">
-      <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold text-primary tracking-tighter font-display text-glow uppercase">AnyAudio</h1>
+    <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 px-4 md:px-6 py-3 md:py-4 flex justify-between items-center lg:left-80 lg:w-[calc(100%-20rem)]">
+      <div className="flex items-center">
+        <h1 className="text-xl md:text-2xl font-bold text-primary tracking-tighter font-display text-glow uppercase">AnyAudio</h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1 md:gap-4">
+        <button 
+          onClick={onSearchClick}
+          className="p-2 text-on-surface-variant hover:text-primary transition-all group active:scale-90"
+          aria-label="Search"
+        >
+          <Search size={22} className="group-hover:scale-110 transition-transform" />
+        </button>
         <button 
           onClick={onImport}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-on-surface hover:text-primary hover:border-primary/50 transition-all group active:scale-95"
+          className="p-2 text-on-surface-variant hover:text-primary transition-all group active:scale-90"
+          aria-label="Import"
         >
-          <Search size={18} className="group-hover:rotate-12 transition-transform" />
-          <span className="font-mono text-[10px] uppercase font-bold tracking-[0.2em]">Import</span>
+          <Crown size={22} className="group-hover:scale-110 transition-transform text-primary/60" />
         </button>
         <button 
           onClick={onProfileClick}
-          className="p-2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2 group"
+          className="p-2 text-on-surface-variant hover:text-primary transition-all group active:scale-90"
         >
            <User size={24} className="group-hover:scale-110 transition-transform" />
-           <span className="hidden sm:inline font-mono text-[10px] uppercase font-bold tracking-widest">Profile</span>
         </button>
       </div>
     </header>

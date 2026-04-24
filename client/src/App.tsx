@@ -232,6 +232,10 @@ export default function App() {
       <TopBar 
         onProfileClick={() => handleTabChange('profile')} 
         onImport={() => setIsImportModalOpen(true)}
+        onSearchClick={() => {
+          setActiveTab('listen');
+          setTimeout(() => document.getElementById('discovery-search')?.focus(), 100);
+        }}
       />
       <Sidebar activeTab={activeTab} onTabChange={handleTabChange} userName={userName} />
       

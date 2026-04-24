@@ -101,9 +101,7 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
           <span className="font-mono text-[10px] text-primary tracking-[0.3em] uppercase font-bold text-glow">Now Playing</span>
           <span className="font-mono text-xs text-on-surface-variant mt-1 truncate max-w-[200px]">{track.title}</span>
         </div>
-        <button className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-white/5">
-          <MoreVertical size={24} />
-        </button>
+        <div className="w-10" /> {/* Spacer to keep title centered */}
       </nav>
 
       <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center px-8 lg:px-24 gap-12 lg:gap-24 overflow-y-auto pb-12">
