@@ -83,11 +83,17 @@ async function search(query) {
     return lines.map(line => {
       try {
         const info = JSON.parse(line);
+        // Better thumbnail selection: try 'thumbnail', then 'thumbnails' array
+        let thumbnail = info.thumbnail;
+        if (!thumbnail && info.thumbnails && info.thumbnails.length > 0) {
+          thumbnail = info.thumbnails[info.thumbnails.length - 1].url;
+        }
+        
         return {
           title: info.title,
           url: info.webpage_url || `https://www.youtube.com/watch?v=${info.id}`,
           duration: info.duration || 0,
-          thumbnail: info.thumbnail || null,
+          thumbnail: thumbnail || null,
           uploader: info.uploader || 'Unknown'
         };
       } catch { return null; }

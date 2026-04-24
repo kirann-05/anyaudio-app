@@ -135,6 +135,7 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
                   <img 
                     src={artist.image} 
                     alt={artist.name} 
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
@@ -174,6 +175,7 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
               <img 
                 src={mix.image} 
                 alt={mix.title} 
+                referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000 mix-blend-overlay"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
