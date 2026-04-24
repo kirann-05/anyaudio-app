@@ -69,7 +69,7 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
         </button>
         <div className="flex flex-col items-center">
           <span className="font-mono text-[10px] text-primary tracking-[0.3em] uppercase font-bold text-glow">Now Playing</span>
-          <span className="font-mono text-xs text-on-surface-variant mt-1">Masterclass Series</span>
+          <span className="font-mono text-xs text-on-surface-variant mt-1 truncate max-w-[200px]">{track.title}</span>
         </div>
         <button className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-white/5">
           <MoreVertical size={24} />
@@ -126,11 +126,11 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
           </div>
 
           <div className="mt-10 text-center lg:text-left w-full">
-            <h1 className="font-display text-4xl md:text-5xl text-on-surface mb-3 font-bold tracking-tight">
+            <h1 className="font-display text-4xl md:text-5xl text-on-surface mb-3 font-bold tracking-tight line-clamp-2">
               {track.title}
             </h1>
             <p className="font-body text-xl text-on-surface-variant">
-              {track.artist} • Masterclass Series
+              {track.artist}
             </p>
           </div>
         </div>

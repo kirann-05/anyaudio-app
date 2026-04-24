@@ -6,24 +6,43 @@ import { EXPLORE_MOCKED_MIXES } from '../constants';
 interface DiscoveryProps {
   onImport?: () => void;
   onPlayTrack?: (track: any) => void;
+  initialArtists?: any[];
+  initialRecommendations?: any[];
+  isLoading?: boolean;
 }
 
-export function DiscoveryScreen({ onImport, onPlayTrack }: DiscoveryProps) {
+export function DiscoveryScreen({ 
+  onImport, 
+  onPlayTrack, 
+  initialArtists = [], 
+  initialRecommendations = [], 
+  isLoading: isParentLoading = false 
+}: DiscoveryProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState<'idle' | 'searching' | 'results'>('idle');
-  const [trendingArtists, setTrendingArtists] = useState<any[]>([]);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [trendingArtists, setTrendingArtists] = useState<any[]>(initialArtists);
+  const [recommendations, setRecommendations] = useState<any[]>(initialRecommendations);
+  const [isLoading, setIsLoading] = useState(isParentLoading);
+
+  // Sync with parent data if it changes
+  useEffect(() => {
+    if (searchStatus === 'idle') {
+      setTrendingArtists(initialArtists);
+      setRecommendations(initialRecommendations);
+      setIsLoading(isParentLoading);
+    }
+  }, [initialArtists, initialRecommendations, isParentLoading, searchStatus]);
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!searchQuery.trim()) return;
+    const query = searchQuery.trim();
+    if (!query) return;
     
     setIsLoading(true);
     setSearchStatus('searching');
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       if (data && data.length > 0) {
         setRecommendations(data.map((m: any, idx: number) => ({
@@ -47,43 +66,6 @@ export function DiscoveryScreen({ onImport, onPlayTrack }: DiscoveryProps) {
       prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
     );
   };
-
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch Trending Artists (for the circles)
-        const artistRes = await fetch('/api/search?q=popular%20artists%20mix');
-        const artistsData = await artistRes.json();
-        if (artistsData && artistsData.length > 0) {
-          setTrendingArtists(artistsData.slice(0, 6).map((a: any) => ({
-            name: a.artist || a.title.split(' - ')[0],
-            image: a.thumbnail || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000000)}?auto=format&fit=crop&w=120&h=120&q=80`,
-            url: a.url
-          })));
-        }
-
-        // Fetch Recommendations (for the cards)
-        const musicRes = await fetch('/api/search?q=trending%20music%20podcasts');
-        const musicData = await musicRes.json();
-        if (musicData && musicData.length > 0) {
-          setRecommendations(musicData.slice(0, 6).map((m: any, idx: number) => ({
-            title: m.title,
-            tag: idx < 3 ? 'TRENDING' : 'PODCAST',
-            description: m.uploader || 'Experience the latest trending sounds.',
-            image: m.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
-            url: m.url
-          })));
-        }
-      } catch (err) {
-        console.error('Failed to fetch home data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchHomeData();
-  }, []);
 
   return (
     <div className="flex-1 max-w-7xl mx-auto pt-28 pb-32 md:pb-16 px-6 lg:px-12 w-full">

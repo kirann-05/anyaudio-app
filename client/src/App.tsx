@@ -206,12 +206,18 @@ export default function App() {
                 <DiscoveryScreen 
                   onImport={() => setIsImportModalOpen(true)} 
                   onPlayTrack={handlePlayDirect}
+                  initialArtists={trendingArtists}
+                  initialRecommendations={recommendations}
+                  isLoading={isHomeLoading}
                 />
               )}
               {activeTab === 'explore' && (
                 <DiscoveryScreen 
                   onImport={() => setIsImportModalOpen(true)} 
                   onPlayTrack={handlePlayDirect}
+                  initialArtists={trendingArtists}
+                  initialRecommendations={recommendations}
+                  isLoading={isHomeLoading}
                 />
               )}
               {activeTab === 'search' && (
