@@ -181,10 +181,11 @@ function buildUI(container, col, progress) {
   });
 
   // Track List Header
-  const listHeader = el('div', { className: 'track-list-row header', style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
+  const listHeader = el('div', { className: 'track-list-row header', style: { display: 'grid', gridTemplateColumns: '40px 1fr 100px 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
   listHeader.innerHTML = `
     <div style="text-align:right;">#</div>
     <div>Title</div>
+    <div style="text-align:right;">Actions</div>
     <div style="text-align:right;">${icons.clock || ''}</div>
   `;
   container.appendChild(listHeader);
@@ -195,7 +196,7 @@ function buildUI(container, col, progress) {
     
     const row = el('div', { 
       className: `track-list-row ${isPlaying ? 'active' : ''}`, 
-      style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '12px 16px', borderRadius: '4px', cursor: 'pointer', alignItems: 'center' } 
+      style: { display: 'grid', gridTemplateColumns: '40px 1fr 100px 60px', gap: '16px', padding: '12px 16px', borderRadius: '4px', cursor: 'pointer', alignItems: 'center' } 
     });
 
     row.innerHTML = `
@@ -206,10 +207,24 @@ function buildUI(container, col, progress) {
       <div class="track-info">
         <div class="track-title" style="font-weight: 500; color: ${isPlaying ? 'var(--accent)' : 'var(--text-primary)'}">${track.title}</div>
       </div>
+      <div class="track-actions" style="display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn-icon-subtle btn-play-next" title="Play Next" style="padding:4px;">${icons.playNext || '⏭️'}</button>
+        <button class="btn-icon-subtle btn-add-queue" title="Add to Queue" style="padding:4px;">${icons.plus || '+'}</button>
+      </div>
       <div class="track-duration" style="text-align:right; color:var(--text-muted); font-size:0.875rem;">
         ${track.duration || '--:--'}
       </div>
     `;
+
+    row.querySelector('.btn-play-next').addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.playNext(track);
+    });
+
+    row.querySelector('.btn-add-queue').addEventListener('click', (e) => {
+      e.stopPropagation();
+      audioEngine.addToQueue(track);
+    });
 
     row.addEventListener('click', () => {
       audioEngine.loadCollection(col.id, col.title, col.tracks, idx);

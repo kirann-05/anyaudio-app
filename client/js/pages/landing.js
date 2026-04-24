@@ -131,13 +131,13 @@ async function loadCollections(grid) {
         <div class="card-subtitle">Collection • ${col.tracks?.length || 0} tracks</div>
       `;
 
-      card.addEventListener('click', () => navigate(`collection/${col.id}`));
-
-      // Directly clicking play starts audio immediately
-      card.querySelector('.card-play-btn').addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const btn = e.currentTarget;
-        btn.innerHTML = '<div class="spinner-sm"></div>';
+      // MAKE THE WHOLE CARD PLAY MUSIC
+      card.addEventListener('click', async () => {
+        const playBtn = card.querySelector('.card-play-btn');
+        const originalContent = playBtn.innerHTML;
+        playBtn.innerHTML = '<div class="spinner-sm"></div>';
+        playBtn.style.opacity = '1';
+        playBtn.style.transform = 'translateY(0)';
         
         try {
           const fullCol = await api.getCollection(col.id);
@@ -149,8 +149,20 @@ async function loadCollections(grid) {
         } catch (err) {
           showToast('Failed to start playback', 'error');
         } finally {
-          btn.innerHTML = icons.play;
+          playBtn.innerHTML = originalContent;
+          setTimeout(() => {
+            if (!card.matches(':hover')) {
+              playBtn.style.opacity = '0';
+              playBtn.style.transform = 'translateY(8px)';
+            }
+          }, 2000);
         }
+      });
+
+      // Play button also triggers the card click
+      card.querySelector('.card-play-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        card.dispatchEvent(new Event('click'));
       });
 
       grid.appendChild(card);
