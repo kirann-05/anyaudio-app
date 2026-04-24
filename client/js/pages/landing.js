@@ -47,7 +47,7 @@ export async function renderLanding(container) {
     statusArea.appendChild(status);
 
     try {
-      const collection = await api.scrapeUrl(url, state.user.id);
+      const collection = await api.scrape(url, state.user.id);
       
       statusArea.innerHTML = '';
       showToast(`Found ${collection.tracks.length} tracks!`, 'success');
