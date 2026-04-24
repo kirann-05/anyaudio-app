@@ -20,10 +20,10 @@ const MOCK_USER_STATS: UserStats = {
 };
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [userId, setUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<AppTab>('listen');
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('ANYAUDIO_LOGGED_IN') === 'true');
+  const [userName, setUserName] = useState(() => localStorage.getItem('ANYAUDIO_USER_NAME') || '');
+  const [userId, setUserId] = useState<string | null>(() => localStorage.getItem('ANYAUDIO_USER_ID'));
+  const [activeTab, setActiveTab] = useState<AppTab>(() => (localStorage.getItem('ANYAUDIO_ACTIVE_TAB') as AppTab) || 'listen');
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null); 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -32,6 +32,15 @@ export default function App() {
   
   const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
   
+  // Persist state changes
+  useEffect(() => {
+    localStorage.setItem('ANYAUDIO_LOGGED_IN', isLoggedIn.toString());
+    localStorage.setItem('ANYAUDIO_USER_NAME', userName);
+    if (userId) localStorage.setItem('ANYAUDIO_USER_ID', userId);
+    else localStorage.removeItem('ANYAUDIO_USER_ID');
+    localStorage.setItem('ANYAUDIO_ACTIVE_TAB', activeTab);
+  }, [isLoggedIn, userName, userId, activeTab]);
+
   const fetchCollections = useCallback(() => {
     if (!isLoggedIn || !userId) return;
     import('./services/api').then(({ getCollections }) => {
@@ -67,6 +76,10 @@ export default function App() {
     setUserId(null);
     setUserName('');
     setIsPlayerOpen(false);
+    localStorage.removeItem('ANYAUDIO_LOGGED_IN');
+    localStorage.removeItem('ANYAUDIO_USER_NAME');
+    localStorage.removeItem('ANYAUDIO_USER_ID');
+    localStorage.removeItem('ANYAUDIO_ACTIVE_TAB');
   };
 
   const handleTabChange = (tab: AppTab) => {
