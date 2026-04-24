@@ -91,5 +91,8 @@ export async function markTrackDownloaded(trackId: string, localFilename: string
 
 // ===================== Stream URL Builder =====================
 export function getStreamUrl(audioUrl: string) {
+  if (audioUrl.startsWith('/api/stream') || audioUrl.includes('/api/stream?url=')) {
+    return audioUrl;
+  }
   return `${BASE}/api/stream?url=${encodeURIComponent(audioUrl)}`;
 }
