@@ -86,11 +86,13 @@ class AudioEngine extends EventTarget {
   }
 
   on(type, callback) {
-    this.addEventListener(type, callback);
+    const wrapper = (e) => callback(e.detail);
+    callback._wrapper = wrapper; // Store for off()
+    this.addEventListener(type, wrapper);
   }
 
   off(type, callback) {
-    this.removeEventListener(type, callback);
+    this.removeEventListener(type, callback._wrapper || callback);
   }
 
   /**
