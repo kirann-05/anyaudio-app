@@ -181,6 +181,16 @@ export default function App() {
     fetchCollections(); // Refresh list after import
   };
 
+  const handleDeleteCollection = async (id: string) => {
+    try {
+      const { deleteCollection } = await import('./services/api');
+      await deleteCollection(id);
+      fetchCollections(); // Refresh list after deletion
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
+
   // Sync state with audio engine
   useEffect(() => {
     import('./services/audioEngine').then(({ audioEngine }) => {
@@ -236,6 +246,7 @@ export default function App() {
                   collections={collections} 
                   onCollectionSelect={handleCollectionSelect} 
                   onImport={() => setIsImportModalOpen(true)}
+                  onDeleteCollection={handleDeleteCollection}
                 />
               )}
               {activeTab === 'listen' && (

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Download, Play, WifiOff, AlertCircle, RefreshCw, SortAsc, Filter as FilterIcon } from 'lucide-react';
+import { Download, Play, WifiOff, AlertCircle, RefreshCw, SortAsc, Filter as FilterIcon, Trash2 } from 'lucide-react';
 import { Collection } from '../types';
 import { MOCK_COLLECTIONS } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,6 +8,7 @@ interface LibraryProps {
   collections?: Collection[];
   onCollectionSelect: (collection: Collection) => void;
   onImport?: () => void;
+  onDeleteCollection?: (id: string) => void;
 }
 
 type SortOption = 'title' | 'artist' | 'date';
@@ -192,9 +193,28 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
               </div>
 
               {!downloadErrors[collection.id] && (
-                <button className="absolute top-6 right-6 z-30 w-12 h-12 rounded-full bg-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all shadow-[0_10px_20px_rgba(245,158,11,0.4)]">
-                  <Play size={24} fill="black" className="text-black ml-1" />
-                </button>
+                <div className="absolute top-6 right-6 z-30 flex gap-2 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Delete "${collection.title}"?`)) {
+                        onDeleteCollection?.(collection.id);
+                      }
+                    }}
+                    className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/50 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCollectionSelect(collection);
+                    }}
+                    className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-[0_10px_20px_rgba(245,158,11,0.4)]"
+                  >
+                    <Play size={24} fill="black" className="text-black ml-1" />
+                  </button>
+                </div>
               )}
             </motion.article>
           ))}
