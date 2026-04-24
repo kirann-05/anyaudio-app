@@ -96,6 +96,35 @@ export default function App() {
     });
   };
 
+  const handlePlayDirect = (trackData: any) => {
+    if (!trackData.audioUrl) return;
+
+    import('./services/api').then(({ getStreamUrl }) => {
+      const streamUrl = getStreamUrl(trackData.audioUrl);
+      const tempTrack: Track = {
+        id: `direct-${Date.now()}`,
+        title: trackData.title,
+        artist: trackData.artist || 'Streaming',
+        coverArt: trackData.image,
+        audioUrl: streamUrl,
+        duration: 0,
+        downloadStatus: 'none'
+      };
+
+      setCurrentTrack(tempTrack);
+      setIsPlaying(true);
+      setIsPlayerOpen(true);
+
+      import('./services/audioEngine').then(({ audioEngine }) => {
+        // Load as a single-track collection for immediate playback
+        audioEngine.loadCollection(`stream-${Date.now()}`, 'Streaming', [tempTrack], 0);
+      });
+      
+      // Background: Also trigger an import if you want it saved, 
+      // but for now let's just stream as requested.
+    });
+  };
+
   const handleImport = async (url: string) => {
     if (!userId) throw new Error('You must be logged in to import.');
     const { scrape } = await import('./services/api');
@@ -161,10 +190,16 @@ export default function App() {
                 />
               )}
               {activeTab === 'listen' && (
-                <DiscoveryScreen onImport={() => setIsImportModalOpen(true)} />
+                <DiscoveryScreen 
+                  onImport={() => setIsImportModalOpen(true)} 
+                  onPlayTrack={handlePlayDirect}
+                />
               )}
               {activeTab === 'explore' && (
-                <DiscoveryScreen onImport={() => setIsImportModalOpen(true)} />
+                <DiscoveryScreen 
+                  onImport={() => setIsImportModalOpen(true)} 
+                  onPlayTrack={handlePlayDirect}
+                />
               )}
               {activeTab === 'search' && (
                 <div className="flex-1 flex items-center justify-center p-12 text-on-surface-variant font-mono uppercase tracking-[0.3em]">

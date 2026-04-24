@@ -5,9 +5,10 @@ import { EXPLORE_MOCKED_MIXES } from '../constants';
 
 interface DiscoveryProps {
   onImport?: () => void;
+  onPlayTrack?: (track: any) => void;
 }
 
-export function DiscoveryScreen({ onImport }: DiscoveryProps) {
+export function DiscoveryScreen({ onImport, onPlayTrack }: DiscoveryProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [trendingArtists, setTrendingArtists] = useState<any[]>([]);
@@ -128,7 +129,7 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
               key={i}
               whileHover={{ scale: 1.05 }}
               className="flex flex-col items-center gap-4 cursor-pointer group shrink-0"
-              onClick={() => artist.url && onImport?.()}
+              onClick={() => onPlayTrack?.({ title: artist.name, artist: artist.name, image: artist.image, audioUrl: artist.url })}
             >
               <div className="relative w-28 h-28 rounded-full p-[1px] bg-gradient-to-b from-white/20 to-transparent group-hover:from-primary/60 transition-all duration-500">
                 <div className="w-full h-full rounded-full overflow-hidden relative border border-white/5 bg-surface-container shadow-xl">
@@ -170,7 +171,7 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
               className={`group relative block rounded-[32px] overflow-hidden glass-panel transition-all duration-500 ${
                 idx === 2 ? 'md:col-span-2 lg:col-span-1' : ''
               } aspect-[4/5] cursor-pointer shadow-2xl border border-white/5`}
-              onClick={() => mix.url && onImport?.()}
+              onClick={() => onPlayTrack?.({ title: mix.title, artist: mix.description, image: mix.image, audioUrl: mix.url })}
             >
               <img 
                 src={mix.image} 
