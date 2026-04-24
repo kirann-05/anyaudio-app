@@ -7,10 +7,8 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "devDependencies": {
-    "vite": "^5.3.4"
-  },
   "dependencies": {
-    "idb-keyval": "^6.2.2"
+    "idb-keyval": "^6.2.2",
+    "vite": "^5.3.4"
   }
 }
