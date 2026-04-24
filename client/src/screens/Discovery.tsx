@@ -11,14 +11,35 @@ interface DiscoveryProps {
 export function DiscoveryScreen({ onImport, onPlayTrack }: DiscoveryProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchStatus, setSearchStatus] = useState<'idle' | 'searching' | 'results'>('idle');
   const [trendingArtists, setTrendingArtists] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = (e?: React.FormEvent) => {
+  const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!searchQuery.trim()) return;
-    console.log('Searching for:', searchQuery);
+    
+    setIsLoading(true);
+    setSearchStatus('searching');
+    try {
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        setRecommendations(data.map((m: any, idx: number) => ({
+          title: m.title,
+          tag: 'SEARCH RESULT',
+          description: m.uploader || 'Found on AnyAudio',
+          image: m.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
+          url: m.url
+        })));
+        setSearchStatus('results');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleFilter = (filter: string) => {
@@ -160,7 +181,9 @@ export function DiscoveryScreen({ onImport, onPlayTrack }: DiscoveryProps) {
       {/* Curated for You */}
       <section>
         <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-2xl text-on-surface font-bold tracking-tight uppercase tracking-[0.2em]">Curated for You</h2>
+          <h2 className="font-display text-2xl text-on-surface font-bold tracking-tight uppercase tracking-[0.2em]">
+            {searchStatus === 'results' ? `Search Results: ${searchQuery}` : 'Curated for You'}
+          </h2>
           {isLoading && <Loader2 size={20} className="animate-spin text-primary opacity-50" />}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
