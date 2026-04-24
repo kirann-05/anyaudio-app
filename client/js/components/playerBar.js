@@ -139,6 +139,21 @@ function wireEvents(bar) {
     if($('time-total')) $('time-total').textContent='0:00';
   });
 
+  audioEngine.addEventListener('loading', e => {
+    const playBtn = $('btn-play');
+    if (playBtn) {
+      if (e.detail.loading) {
+        playBtn.innerHTML = '<div class="spinner-sm" style="width:20px;height:20px;border-width:2px;"></div>';
+      } else {
+        playBtn.innerHTML = audioEngine.isPlaying ? icons.pause : icons.play;
+      }
+    }
+    const title = $('now-track-title');
+    if (title && e.detail.loading) {
+      title.textContent = 'Finding next track...';
+    }
+  });
+
   // Track ended progress save
   audioEngine.addEventListener('trackended', e => {
     if (state.user && audioEngine.collectionId) {
