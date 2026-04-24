@@ -26,7 +26,7 @@ const MOCK_USER_STATS: UserStats = {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
-  const [activeTab, setActiveTab] = useState<AppTab>('library');
+  const [activeTab, setActiveTab] = useState<AppTab>('listen');
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null); 
   const [isPlaying, setIsPlaying] = useState(false);

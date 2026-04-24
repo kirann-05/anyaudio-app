@@ -11,7 +11,7 @@ interface NavigationProps {
 export function Sidebar({ activeTab, onTabChange, userName = 'Audiophile Member' }: NavigationProps) {
   const items = [
     { id: 'listen', icon: Headphones, label: 'Discovery' },
-    { id: 'explore', icon: Search, label: 'Explore' }, // Using Search icon for explore per screenshot visual style
+    { id: 'explore', icon: Search, label: 'Explore' },
     { id: 'library', icon: Library, label: 'Library' },
   ];
 
