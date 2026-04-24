@@ -31,6 +31,9 @@ export default function App() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
+  const [trendingArtists, setTrendingArtists] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isHomeLoading, setIsHomeLoading] = useState(false);
   
   // Persist state changes
   useEffect(() => {
@@ -50,10 +53,43 @@ export default function App() {
     });
   }, [isLoggedIn, userId]);
 
+  const fetchHomeData = useCallback(async () => {
+    setIsHomeLoading(true);
+    try {
+      const { search } = await import('./services/api');
+      // Fetch Trending Artists
+      const artists = await search('popular artists mix');
+      if (artists) {
+        setTrendingArtists(artists.slice(0, 6).map((a: any) => ({
+          name: a.artist || a.title.split(' - ')[0],
+          image: a.thumbnail || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000000)}?auto=format&fit=crop&w=120&h=120&q=80`,
+          url: a.url
+        })));
+      }
+
+      // Fetch Recommendations
+      const music = await search('trending music podcasts');
+      if (music) {
+        setRecommendations(music.slice(0, 6).map((m: any, idx: number) => ({
+          title: m.title,
+          tag: idx < 3 ? 'TRENDING' : 'PODCAST',
+          description: m.uploader || 'Experience the latest trending sounds.',
+          image: m.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
+          url: m.url
+        })));
+      }
+    } catch (err) {
+      console.error('Failed to fetch home data:', err);
+    } finally {
+      setIsHomeLoading(false);
+    }
+  }, []);
+
   // Link to backend
   useEffect(() => {
     fetchCollections();
-  }, [fetchCollections]);
+    fetchHomeData();
+  }, [fetchCollections, fetchHomeData]);
 
   const handleLogin = async (name: string) => {
     try {

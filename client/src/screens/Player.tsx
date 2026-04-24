@@ -23,22 +23,46 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
   const [isRepeat, setIsRepeat] = useState(false);
   
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(track.duration || 0);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        import('../services/audioEngine').then(({ audioEngine }) => {
-          const time = audioEngine.getCurrentTime();
-          const dur = audioEngine.getDuration() || 1;
-          setCurrentTime(time);
+    const syncState = () => {
+      import('../services/audioEngine').then(({ audioEngine }) => {
+        const time = audioEngine.getCurrentTime();
+        const dur = audioEngine.getDuration();
+        setCurrentTime(time);
+        if (dur > 0) {
+          setDuration(dur);
           setProgress((time / dur) * 100);
-        });
-      }, 500);
+        }
+      });
+    };
+
+    if (isPlaying) {
+      interval = setInterval(syncState, 500);
+    } else {
+      syncState(); // Final sync on pause
     }
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, track.id]);
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const clickedProgress = (x / rect.width) * 100;
+    
+    import('../services/audioEngine').then(({ audioEngine }) => {
+      const dur = audioEngine.getDuration();
+      if (dur > 0) {
+        const newTime = (clickedProgress / 100) * dur;
+        audioEngine.seek(newTime);
+        setCurrentTime(newTime);
+        setProgress(clickedProgress);
+      }
+    });
+  };
 
   const speeds = [1, 1.5, 2];
 
@@ -139,16 +163,16 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
         <div className="w-full max-w-xl flex flex-col justify-center">
           <div className="glass-panel rounded-3xl p-8 md:p-12 shadow-2xl border border-white/5 relative overflow-hidden">
             {/* Scrubber */}
-            <div className="mb-10 group cursor-pointer">
+            <div className="mb-10 group cursor-pointer" onClick={handleSeek}>
               <div className="flex justify-between font-mono text-xs text-on-surface-variant mb-4 font-medium uppercase tracking-tighter">
                 <span className={isPlaying ? 'text-white' : ''}>{formatTime(currentTime)}</span>
-                <span className="text-primary font-bold">{track.duration ? `-${formatTime(track.duration)}` : 'Live'}</span>
+                <span className="text-primary font-bold">{duration > 0 ? `-${formatTime(duration)}` : 'Loading...'}</span>
               </div>
               <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden flex items-center">
                 <motion.div 
                   className="absolute top-0 left-0 h-full bg-primary rounded-full"
                   animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5 }}
+                  transition={{ duration: 0.1 }}
                 >
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </motion.div>
@@ -164,7 +188,12 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
                 <Shuffle size={24} strokeWidth={isShuffle ? 3 : 2} />
               </button>
               
-              <button className="text-on-surface-variant hover:text-white transition-colors p-2 active:scale-95"><SkipBack size={36} fill="currentColor" /></button>
+              <button 
+                onClick={() => import('../services/audioEngine').then(({ audioEngine }) => audioEngine.previous())}
+                className="text-on-surface-variant hover:text-white transition-colors p-2 active:scale-95"
+              >
+                <SkipBack size={36} fill="currentColor" />
+              </button>
               
               <button 
                 onClick={onTogglePlay}
@@ -173,7 +202,12 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
                 {isPlaying ? <Pause size={48} fill="currentColor" /> : <Play size={48} fill="currentColor" className="ml-2" />}
               </button>
 
-              <button className="text-on-surface-variant hover:text-white transition-colors p-2 active:scale-95"><SkipForward size={36} fill="currentColor" /></button>
+              <button 
+                onClick={() => import('../services/audioEngine').then(({ audioEngine }) => audioEngine.next())}
+                className="text-on-surface-variant hover:text-white transition-colors p-2 active:scale-95"
+              >
+                <SkipForward size={36} fill="currentColor" />
+              </button>
               
               <button 
                 onClick={() => setIsRepeat(!isRepeat)}
