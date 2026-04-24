@@ -46,6 +46,10 @@ async function initDB() {
   }
   // Always ensure schema (handles existing DB with missing tables/columns)
   SCHEMA.forEach(stmt => db.run(stmt));
+  
+  // Migration: Add cover_url to collections if missing (SQLite doesn't support IF NOT EXISTS in ALTER)
+  try { db.run("ALTER TABLE collections ADD COLUMN cover_url TEXT"); } catch(e) { /* already exists */ }
+  
   saveLocalDB();
   console.log('✅ Connected to Local SQLite');
 }

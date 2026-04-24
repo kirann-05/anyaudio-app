@@ -58,7 +58,12 @@ async function scrapeSpotify(url) {
     ], 60000);
 
     const lines = raw.trim().split('\n').filter(Boolean);
-    const info = JSON.parse(lines[0]);
+    if (lines.length === 0) throw new Error('No YouTube results found for this Spotify track');
+    
+    let info = null;
+    try { info = JSON.parse(lines[0]); } catch(e) { throw new Error('Invalid response from YouTube search'); }
+    
+    if (!info) throw new Error('YouTube search returned no data');
 
     const ytdlpUrl = `ytdlp://${info.url || info.webpage_url || info.id}`;
     let duration = info.duration || null;
@@ -163,7 +168,12 @@ async function scrapeSpotifyPlaylist(url) {
           ], 30000);
 
           const lines = raw.trim().split('\n').filter(Boolean);
-          const ytInfo = JSON.parse(lines[0]);
+          if (lines.length === 0) return null;
+          
+          let ytInfo = null;
+          try { ytInfo = JSON.parse(lines[0]); } catch(e) { return null; }
+          
+          if (!ytInfo) return null;
           
           return {
             id: i + index,
