@@ -22,6 +22,7 @@ const MOCK_USER_STATS: UserStats = {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>('listen');
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null); 
@@ -32,26 +33,38 @@ export default function App() {
   const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
   
   const fetchCollections = useCallback(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !userId) return;
     import('./services/api').then(({ getCollections }) => {
-      getCollections('user123').then((data: any) => {
+      getCollections(userId).then((data: any) => {
         if (data && data.length > 0) setCollections(data);
       }).catch(console.error);
     });
-  }, [isLoggedIn]);
+  }, [isLoggedIn, userId]);
 
   // Link to backend
   useEffect(() => {
     fetchCollections();
   }, [fetchCollections]);
 
-  const handleLogin = (name: string) => {
-    setUserName(name);
-    setIsLoggedIn(true);
+  const handleLogin = async (name: string) => {
+    try {
+      const { login } = await import('./services/api');
+      const user = await login(name);
+      setUserId(user.id);
+      setUserName(user.username);
+      setIsLoggedIn(true);
+    } catch (err) {
+      console.error('Login failed:', err);
+      // Fallback for demo if backend fails
+      setUserName(name);
+      setUserId('demo-user');
+      setIsLoggedIn(true);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setUserId(null);
     setUserName('');
     setIsPlayerOpen(false);
   };
@@ -84,8 +97,9 @@ export default function App() {
   };
 
   const handleImport = async (url: string) => {
+    if (!userId) throw new Error('You must be logged in to import.');
     const { scrape } = await import('./services/api');
-    await scrape(url, 'user123');
+    await scrape(url, userId);
     fetchCollections(); // Refresh list after import
   };
 
