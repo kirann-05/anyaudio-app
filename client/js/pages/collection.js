@@ -98,26 +98,52 @@ function buildUI(container, col, progress) {
     }
   });
 
-  // Play button row
-  const actionRow = el('div', { style: { paddingBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px' } });
-  const playBtn = el('button', { className: 'btn-play', style: { width: '56px', height: '56px', background: 'var(--accent)', color: '#000' } });
+  // Play button row (Spotify Principle: Primary Action Dominance)
+  const actionRow = el('div', { 
+    className: 'collection-action-bar',
+    style: { paddingBottom: '32px', display: 'flex', alignItems: 'center', gap: '32px' } 
+  });
   
-  // Update play button state based on audio engine
+  const playBtn = el('button', { 
+    className: 'btn-play-hero', 
+    style: { width: '56px', height: '56px', borderRadius: '50%', background: 'var(--accent)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' } 
+  });
+  
+  const shuffleBtn = el('button', { className: 'btn-icon-subtle', title: 'Shuffle', innerHTML: icons.shuffle });
+  const addPlaylistBtn = el('button', { className: 'btn-icon-subtle', title: 'Add to Playlist', innerHTML: icons.list });
+  const downloadBtn = el('button', { className: 'btn-icon-subtle', title: 'Download all', innerHTML: icons.download });
+  const moreBtn = el('button', { className: 'btn-icon-subtle', title: 'More', innerHTML: icons.more });
+
+  actionRow.appendChild(playBtn);
+  actionRow.appendChild(shuffleBtn);
+  actionRow.appendChild(addPlaylistBtn);
+  actionRow.appendChild(downloadBtn);
+  actionRow.appendChild(moreBtn);
+  
+  // Right-aligned List View Toggle
+  const listToggle = el('div', { 
+    style: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem', fontWeight: '600' } 
+  });
+  listToggle.innerHTML = `<span>List</span> ${icons.list}`;
+  actionRow.appendChild(listToggle);
+
+  container.appendChild(actionRow);
+
+  // Logic for Play Button
   const updatePlayBtn = () => {
     if (audioEngine.collectionId === col.id && audioEngine.isPlaying) {
       playBtn.innerHTML = icons.pause;
     } else {
       playBtn.innerHTML = icons.play;
     }
-    // Size override for SVG inside this specific button
     const svg = playBtn.querySelector('svg');
-    if(svg) { svg.style.width = '24px'; svg.style.height = '24px'; svg.style.marginLeft = playBtn.innerHTML.includes('polygon') ? '4px' : '0'; }
+    if(svg) { svg.style.width = '28px'; svg.style.height = '28px'; }
   };
+  audioEngine.on('stateChange', updatePlayBtn);
   updatePlayBtn();
-  
+
   playBtn.addEventListener('click', () => {
     if (audioEngine.collectionId !== col.id) {
-      // It's a new collection, start from beginning or saved progress
       audioEngine.loadCollection(col.id, col.title, col.tracks, progress?.trackIndex || 0, progress?.currentTime || 0);
       audioEngine.play();
     } else {
@@ -125,113 +151,73 @@ function buildUI(container, col, progress) {
     }
   });
 
-  actionRow.appendChild(playBtn);
-
-  // Playlist Button
-  const addPlaylistBtn = el('button', { 
-    className: 'btn btn-ghost btn-icon', 
-    title: 'Add all to Playlist',
-    innerHTML: icons.list
-  });
   addPlaylistBtn.addEventListener('click', async () => {
     try {
       const playlists = await api.getPlaylists(state.user.id);
       let selectedPlaylist = null;
-
       if (playlists.length === 0) {
-        const name = prompt('You have no playlists. Enter a name to create one:');
-        if (name) {
-          selectedPlaylist = await api.createPlaylist(state.user.id, name);
-        } else return;
+        const name = prompt('Enter a name for your new playlist:');
+        if (name) selectedPlaylist = await api.createPlaylist(state.user.id, name);
+        else return;
       } else {
         const pList = playlists.map((p, i) => `${i+1}. ${p.name}`).join('\n');
-        const choice = prompt(`Add all tracks to which playlist? (Enter number):\n${pList}`);
+        const choice = prompt(`Add to which playlist? (Enter number):\n${pList}`);
         if (!choice) return;
-        const idx = parseInt(choice) - 1;
-        selectedPlaylist = playlists[idx];
+        selectedPlaylist = playlists[parseInt(choice) - 1];
       }
-
       if (selectedPlaylist) {
         const trackIndices = col.tracks.map(t => t.track_index);
         await api.addToPlaylist(selectedPlaylist.id, col.id, trackIndices);
-        alert(`Successfully added ${trackIndices.length} tracks to "${selectedPlaylist.name}"`);
+        alert(`Added ${trackIndices.length} tracks to "${selectedPlaylist.name}"`);
         const { refreshSidebarLibrary } = await import('../components/sidebar.js');
         refreshSidebarLibrary();
       }
-    } catch (err) {
-      alert('Failed: ' + err.message);
-    }
+    } catch (err) { alert('Failed: ' + err.message); }
   });
-  actionRow.appendChild(addPlaylistBtn);
 
-  // Download button
-  const downloadBtn = el('button', { 
-    className: 'btn btn-ghost', 
-    style: { display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' },
-    title: 'Download for offline use'
-  });
-  downloadBtn.innerHTML = `${icons.download} <span>Download</span>`;
-  
   downloadBtn.addEventListener('click', async () => {
-    if (!fsService.isReady) {
-      showToast('Please connect a library folder first', 'info');
-      await fsService.promptForDirectory();
-    }
-    if (fsService.isReady) {
-      showToast('Starting download...', 'info');
-      downloadManager.startDownload(col);
-    }
+    if (!fsService.isReady) { await fsService.promptForDirectory(); }
+    if (fsService.isReady) { downloadManager.startDownload(col); }
   });
-  
-  actionRow.appendChild(downloadBtn);
-  container.appendChild(actionRow);
 
   // Track List Header
-  const listHeader = el('div', { style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
+  const listHeader = el('div', { className: 'track-list-row header', style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '0 16px 8px', color: 'var(--text-muted)', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '16px' } });
   listHeader.innerHTML = `
     <div style="text-align:right;">#</div>
     <div>Title</div>
-    <div></div>
+    <div style="text-align:right;">${icons.clock || ''}</div>
   `;
   container.appendChild(listHeader);
 
-  // Track List
-  const trackList = el('div', { className: 'track-list', id: 'collection-track-list' });
-  col.tracks.forEach((t, i) => {
-    const isPlayingThis = audioEngine.collectionId === col.id && audioEngine.currentIndex === i;
+  // Render Tracks
+  col.tracks.forEach((track, idx) => {
+    const isPlaying = audioEngine.collectionId === col.id && audioEngine.currentTrackIndex === idx;
     
-    // Check progress
-    const done = progress && progress.trackIndex > i;
-    const cur = progress && progress.trackIndex === i;
-    
-    const item = el('div', { 
-      className: `sidebar-item ${isPlayingThis ? 'active' : ''}`, 
-      style: { padding: '12px 16px', borderRadius: '4px', display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', alignItems: 'center' }
+    const row = el('div', { 
+      className: `track-list-row ${isPlaying ? 'active' : ''}`, 
+      style: { display: 'grid', gridTemplateColumns: '40px 1fr 60px', gap: '16px', padding: '12px 16px', borderRadius: '4px', cursor: 'pointer', alignItems: 'center' } 
     });
-    
-    const isDownloaded = t.downloaded === 1 || t.downloaded === true;
-    
-    item.innerHTML = `
-      <div style="text-align:right;color:var(--text-muted);font-variant-numeric:tabular-nums;">${isPlayingThis ? `<span style="color:var(--accent);">${icons.music}</span>` : i+1}</div>
-      <div style="color:${isPlayingThis ? 'var(--accent)' : 'var(--text-primary)'}; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:8px;">
-        ${esc(t.title)}
-        ${isDownloaded ? `<span style="color:var(--success); width:12px; height:12px;" title="Downloaded">${icons.circleCheck}</span>` : ''}
+
+    row.innerHTML = `
+      <div class="track-number-cell" style="text-align:right; position:relative; width:40px; height:20px;">
+        <span class="num">${idx + 1}</span>
+        <span class="play-icon" style="display:none; position:absolute; top:0; right:0;">${icons.play}</span>
       </div>
-      <div></div>
+      <div class="track-info">
+        <div class="track-title" style="font-weight: 500; color: ${isPlaying ? 'var(--accent)' : 'var(--text-primary)'}">${track.title}</div>
+      </div>
+      <div class="track-duration" style="text-align:right; color:var(--text-muted); font-size:0.875rem;">
+        ${track.duration || '--:--'}
+      </div>
     `;
-    
-    item.addEventListener('click', () => {
-      if (audioEngine.collectionId !== col.id) {
-        audioEngine.loadCollection(col.id, col.title, col.tracks, i, 0);
-      } else {
-        audioEngine.loadTrack(i);
-      }
+
+    row.addEventListener('click', () => {
+      audioEngine.loadCollection(col.id, col.title, col.tracks, idx);
+      audioEngine.play();
     });
-    
-    trackList.appendChild(item);
+
+    container.appendChild(row);
   });
-  
-  container.appendChild(trackList);
 
   // Global Audio Engine Listeners specific to this view
   const trackChangeHandler = (e) => {

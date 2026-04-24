@@ -162,6 +162,77 @@ h4 { font-size: 1rem; }
   box-shadow: var(--shadow-md);
 }
 
+/* ---------- Track List Hover ---------- */
+.track-list-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.track-list-row:hover .num {
+  display: none;
+}
+
+.track-list-row:hover .play-icon {
+  display: block !important;
+}
+
+.track-list-row .play-icon svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-primary);
+}
+
+/* ---------- Toggle Switch ---------- */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bg-surface);
+  transition: .4s;
+  border: 1px solid var(--glass-border);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-secondary);
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(14px);
+  background-color: var(--accent);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
@@ -226,6 +297,36 @@ h4 { font-size: 1rem; }
   padding: 0;
   border-radius: var(--radius-full);
   font-size: 1.2rem;
+}
+
+.btn-icon-subtle {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.btn-icon-subtle:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg);
+}
+
+.btn-icon-subtle svg {
+  width: 24px;
+  height: 24px;
+}
+
+.btn-play-hero:hover {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+  box-shadow: 0 8px 24px var(--accent-glow-strong);
 }
 
 .btn-sm {

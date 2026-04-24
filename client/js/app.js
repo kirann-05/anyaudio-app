@@ -74,25 +74,26 @@ async function handleRoute() {
     // Header inside main viewport
     const header = el('div', { className: 'main-header' });
     header.innerHTML = `
-      <div class="header-search" style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;">
+      <div class="header-search" style="display:flex;align-items:center;gap:16px;flex:1;flex-wrap:wrap;">
         <div style="position:relative; flex:1; min-width:200px;">
           <div style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none;">${icons.search}</div>
-          <input type="text" class="input" id="global-url-input" placeholder="Paste link..." autocomplete="off" style="padding-left:40px; width:100%;" />
+          <input type="text" class="input" id="global-url-input" placeholder="Paste link or search..." autocomplete="off" style="padding-left:40px; width:100%; border-radius:var(--radius-full);" />
+          <button id="header-search-trigger" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:var(--accent); border:none; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#000;">
+            ${icons.search}
+          </button>
         </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-ghost" id="fetch-stream-btn" style="padding:8px 16px; border-radius:var(--radius-full); font-size:0.875rem; border:1px solid rgba(255,255,255,0.1);">
-            Stream Online
-          </button>
-          <button class="btn btn-accent" id="fetch-download-btn" style="padding:8px 16px; border-radius:var(--radius-full); font-size:0.875rem; display:flex; align-items:center; gap:6px;">
-            ${icons.download} Save Offline
-          </button>
+        
+        <div class="mode-toggle-wrapper" style="display:flex; align-items:center; gap:10px; background:var(--bg-elevated); padding:6px 14px; border-radius:var(--radius-full); border:1px solid var(--glass-border);">
+          <span style="font-size:0.75rem; font-weight:700; color:var(--text-secondary);">OFFLINE MODE</span>
+          <label class="switch">
+            <input type="checkbox" id="offline-mode-toggle">
+            <span class="slider round"></span>
+          </label>
         </div>
       </div>
+
       <div class="header-user" style="display:flex; align-items:center; gap:12px; margin-left:16px;">
-        <button class="btn btn-ghost btn-sm" id="connect-folder-header-btn" title="Connect Local Folder" style="padding:8px; display:flex; align-items:center; gap:6px;">
-          ${icons.folder} <span class="hide-on-mobile" style="font-size:0.75rem; font-weight:500;">Connect Folder</span>
-        </button>
-        <div class="user-avatar">${state.user.username.charAt(0).toUpperCase()}</div>
+        <div class="user-avatar" id="user-profile-trigger" style="cursor:pointer; width:40px; height:40px; font-size:1rem;">${state.user.username.charAt(0).toUpperCase()}</div>
       </div>
     `;
     mainViewport.appendChild(header);
@@ -130,13 +131,15 @@ async function handleRoute() {
     root.appendChild(appGrid);
     isAppInitialized = true;
 
-    // Global URL Input handler
+    // Global URL Input & Toggle handler
     const urlInput = document.getElementById('global-url-input');
-    const streamBtn = document.getElementById('fetch-stream-btn');
-    const downloadBtn = document.getElementById('fetch-download-btn');
+    const searchTrigger = document.getElementById('header-search-trigger');
+    const offlineToggle = document.getElementById('offline-mode-toggle');
+    const profileTrigger = document.getElementById('user-profile-trigger');
 
-    const triggerScrape = (offline = false) => {
+    const triggerScrape = () => {
       const url = urlInput.value.trim();
+      const offline = offlineToggle.checked;
       if (url) {
         urlInput.value = '';
         navigate('');
@@ -145,11 +148,11 @@ async function handleRoute() {
     };
 
     urlInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') triggerScrape(false);
+      if (e.key === 'Enter') triggerScrape();
     });
 
-    streamBtn.addEventListener('click', () => triggerScrape(false));
-    downloadBtn.addEventListener('click', () => triggerScrape(true));
+    searchTrigger.addEventListener('click', triggerScrape);
+    profileTrigger.addEventListener('click', () => navigate('user'));
 
     // Bottom Nav handlers
     const updateBNav = (path) => {
@@ -192,6 +195,11 @@ async function handleRoute() {
     case 'library':
       state.currentPage = 'library';
       await renderLibrary(contentArea);
+      break;
+    case 'user':
+      state.currentPage = 'user';
+      const { renderUserPage } = await import('./pages/user.js');
+      await renderUserPage(contentArea);
       break;
     default:
       state.currentPage = 'home';
