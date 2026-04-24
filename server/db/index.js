@@ -112,7 +112,8 @@ async function getUser(id) {
   const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
   return error ? null : data;
 }
-
+// ===================== COLLECTIONS =====================
+async function saveCollection(userId, url, title, tracks) {
   const colId = genId();
   
   // PRO ARTWORK ENGINE: Search iTunes for official artist covers
