@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, MoreVertical, Heart, Shuffle, SkipBack, Play, Pause, SkipForward, Repeat, Subtitles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Track } from '../types';
@@ -10,11 +10,35 @@ interface PlayerScreenProps {
   onClose: () => void;
 }
 
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: PlayerScreenProps) {
   const [showLyrics, setShowLyrics] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
+  
+  const [currentTime, setCurrentTime] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        import('../services/audioEngine').then(({ audioEngine }) => {
+          const time = audioEngine.getCurrentTime();
+          const dur = audioEngine.getDuration() || 1;
+          setCurrentTime(time);
+          setProgress((time / dur) * 100);
+        });
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   const speeds = [1, 1.5, 2];
 
@@ -117,15 +141,14 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
             {/* Scrubber */}
             <div className="mb-10 group cursor-pointer">
               <div className="flex justify-between font-mono text-xs text-on-surface-variant mb-4 font-medium uppercase tracking-tighter">
-                <span className={isPlaying ? 'text-white' : ''}>24:15</span>
-                <span className="text-primary font-bold">-{track.duration}</span>
+                <span className={isPlaying ? 'text-white' : ''}>{formatTime(currentTime)}</span>
+                <span className="text-primary font-bold">{track.duration ? `-${formatTime(track.duration)}` : 'Live'}</span>
               </div>
               <div className="relative h-1.5 bg-white/10 rounded-full overflow-hidden flex items-center">
                 <motion.div 
                   className="absolute top-0 left-0 h-full bg-primary rounded-full"
-                  initial={{ width: '35%' }}
-                  animate={{ width: isPlaying ? '38%' : '35%' }}
-                  transition={{ duration: 10, repeat: isPlaying ? Infinity : 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.5 }}
                 >
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(245,158,11,0.8)] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </motion.div>
