@@ -5,6 +5,7 @@ import { icons } from '../utils/icons.js';
 import { refreshSidebarLibrary } from '../components/sidebar.js';
 import { fsService } from '../services/fs.js';
 import { downloadManager } from '../services/downloadManager.js';
+import { audioEngine } from '../services/audio.js';
 
 let cleanupGlobalListener = null;
 
@@ -123,7 +124,7 @@ async function loadCollections(grid) {
               : ''
             }
             <div class="premium-cover-fallback" style="${col.cover_url ? 'display:none;' : ''}"><span>${col.title.charAt(0).toUpperCase()}</span></div>
-            <div class="card-play-btn" style="position:absolute; top:50%; left:50%;">${icons.play}</div>
+            <div class="card-play-btn" style="position:absolute; bottom:12px; right:12px; transform:translateY(8px); opacity:0; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">${icons.play}</div>
           </div>
         </div>
         <div class="card-title" style="margin-top:12px;">${escapeHtml(col.title)}</div>
@@ -132,11 +133,24 @@ async function loadCollections(grid) {
 
       card.addEventListener('click', () => navigate(`collection/${col.id}`));
 
-      // Directly clicking play starts audio
-      card.querySelector('.card-play-btn').addEventListener('click', (e) => {
+      // Directly clicking play starts audio immediately
+      card.querySelector('.card-play-btn').addEventListener('click', async (e) => {
         e.stopPropagation();
-        // Just navigate to the collection view
-        navigate(`collection/${col.id}`);
+        const btn = e.currentTarget;
+        btn.innerHTML = '<div class="spinner-sm"></div>';
+        
+        try {
+          const fullCol = await api.getCollection(col.id);
+          if (fullCol && fullCol.tracks && fullCol.tracks.length > 0) {
+            audioEngine.loadCollection(fullCol.id, fullCol.title, fullCol.tracks, 0);
+            audioEngine.play();
+            showToast(`Now playing: ${fullCol.title}`, 'success');
+          }
+        } catch (err) {
+          showToast('Failed to start playback', 'error');
+        } finally {
+          btn.innerHTML = icons.play;
+        }
       });
 
       grid.appendChild(card);
