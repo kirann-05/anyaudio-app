@@ -27,26 +27,32 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    let interval: any;
-    const syncState = () => {
-      import('../services/audioEngine').then(({ audioEngine }) => {
-        const time = audioEngine.getCurrentTime();
-        const dur = audioEngine.getDuration();
-        setCurrentTime(time);
-        if (dur > 0) {
-          setDuration(dur);
-          setProgress((time / dur) * 100);
-        }
-      });
+    let engine: any;
+    
+    const handleTimeUpdate = (detail: any) => {
+      setCurrentTime(detail.currentTime);
+      if (detail.duration > 0) {
+        setDuration(detail.duration);
+        setProgress((detail.currentTime / detail.duration) * 100);
+      }
     };
 
-    if (isPlaying) {
-      interval = setInterval(syncState, 500);
-    } else {
-      syncState(); // Final sync on pause
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, track.id]);
+    import('../services/audioEngine').then(({ audioEngine }) => {
+      engine = audioEngine;
+      // Initialize with current values
+      setCurrentTime(engine.currentTime);
+      if (engine.duration > 0) {
+        setDuration(engine.duration);
+        setProgress((engine.currentTime / engine.duration) * 100);
+      }
+      
+      engine.on('timeupdate', handleTimeUpdate);
+    });
+
+    return () => {
+      if (engine) engine.off('timeupdate', handleTimeUpdate);
+    };
+  }, [track.id]);
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -54,7 +60,7 @@ export function PlayerScreen({ track, isPlaying, onTogglePlay, onClose }: Player
     const clickedProgress = (x / rect.width) * 100;
     
     import('../services/audioEngine').then(({ audioEngine }) => {
-      const dur = audioEngine.getDuration();
+      const dur = audioEngine.duration;
       if (dur > 0) {
         const newTime = (clickedProgress / 100) * dur;
         audioEngine.seek(newTime);
