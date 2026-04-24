@@ -57,6 +57,13 @@ export async function deleteCollection(id) {
   return fetchJSON(`/api/collection/${id}`, { method: 'DELETE' });
 }
 
+export async function updateCollection(id, data) {
+  return fetchJSON(`/api/collection/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 // ===================== Progress =====================
 export async function saveProgress(userId, collectionId, trackIndex, currentTime, completed) {
   return fetchJSON('/api/progress', {

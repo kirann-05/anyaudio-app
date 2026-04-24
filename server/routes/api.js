@@ -88,6 +88,17 @@ router.get('/collection/:id', async (req, res) => {
   }
 });
 
+router.patch('/collection/:id', async (req, res) => {
+  try {
+    const { title, type } = req.body;
+    await updateCollection(req.params.id, { title, type });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Update collection error:', err);
+    res.status(500).json({ error: 'Failed to update collection' });
+  }
+});
+
 router.delete('/collection/:id', async (req, res) => {
   try {
     await deleteCollection(req.params.id);

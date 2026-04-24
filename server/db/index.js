@@ -23,7 +23,15 @@ let db = null;
 
 const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, username TEXT UNIQUE)",
-  "CREATE TABLE IF NOT EXISTS collections (id TEXT PRIMARY KEY, user_id TEXT, url TEXT, title TEXT, cover_url TEXT, updated_at TEXT)",
+    `CREATE TABLE IF NOT EXISTS collections (
+      id TEXT PRIMARY KEY,
+      user_id TEXT,
+      url TEXT,
+      title TEXT,
+      cover_url TEXT,
+      type TEXT DEFAULT 'music',
+      updated_at DATETIME
+    )`,
   "CREATE TABLE IF NOT EXISTS tracks (id TEXT PRIMARY KEY, collection_id TEXT, track_index INTEGER, title TEXT, audio_url TEXT, duration INTEGER, downloaded BOOLEAN DEFAULT 0, local_filename TEXT, transcript TEXT)",
   "CREATE TABLE IF NOT EXISTS progress (user_id TEXT, collection_id TEXT, track_index INTEGER, current_time REAL, completed INTEGER DEFAULT 0, updated_at TEXT, PRIMARY KEY (user_id, collection_id))",
   "CREATE TABLE IF NOT EXISTS playlists (id TEXT PRIMARY KEY, user_id TEXT, name TEXT, description TEXT, updated_at TEXT)",
@@ -47,8 +55,9 @@ async function initDB() {
   // Always ensure schema (handles existing DB with missing tables/columns)
   SCHEMA.forEach(stmt => db.run(stmt));
   
-  // Migration: Add cover_url to collections if missing (SQLite doesn't support IF NOT EXISTS in ALTER)
-  try { db.run("ALTER TABLE collections ADD COLUMN cover_url TEXT"); } catch(e) { /* already exists */ }
+  // Migration: Add cover_url and type to collections if missing
+  try { db.run("ALTER TABLE collections ADD COLUMN cover_url TEXT"); } catch(e) {}
+  try { db.run("ALTER TABLE collections ADD COLUMN type TEXT DEFAULT 'music'"); } catch(e) {}
   
   saveLocalDB();
   console.log('✅ Connected to Local SQLite');
@@ -100,10 +109,13 @@ async function getUser(id) {
 
 // ===================== COLLECTIONS =====================
 async function saveCollection(userId, url, title, tracks) {
+  const colId = genId();
+  const coverUrl = tracks[0]?.coverUrl || null;
+  const colType = (tracks.some(t => t.transcript) || title.toLowerCase().includes('podcast') || title.toLowerCase().includes('discourse')) ? 'podcast' : 'music';
+
   if (useLocal) {
-    const colId = genId();
-    db.run("INSERT INTO collections (id, user_id, url, title, cover_url, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [colId, userId, url, title, tracks[0]?.coverUrl || null, new Date().toISOString()]);
+    db.run("INSERT INTO collections (id, user_id, url, title, cover_url, type, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [colId, userId, url, title, coverUrl, colType, new Date().toISOString()]);
     tracks.forEach((t, i) => {
       db.run("INSERT INTO tracks (id, collection_id, track_index, title, audio_url, duration, downloaded, transcript) VALUES (?, ?, ?, ?, ?, ?, 0, ?)",
         [genId(), colId, i, t.title, t.audioUrl, t.duration || 0, t.transcript || null]);
@@ -111,8 +123,14 @@ async function saveCollection(userId, url, title, tracks) {
     saveLocalDB();
     return getCollection(colId);
   }
-  const coverUrl = tracks[0]?.coverUrl || null;
-  const { data: col, error: colErr } = await supabase.from('collections').insert([{ user_id: userId, url, title, cover_url: coverUrl }]).select().single();
+  
+  const { data: col, error: colErr } = await supabase.from('collections').insert([{ 
+    user_id: userId, 
+    url, 
+    title, 
+    cover_url: coverUrl,
+    type: colType
+  }]).select().single();
   if (colErr) throw colErr;
   const rows = tracks.map((t, i) => ({ collection_id: col.id, track_index: i, title: t.title, audio_url: t.audioUrl, duration: t.duration || 0, downloaded: false, transcript: t.transcript || null }));
   const { error: trErr } = await supabase.from('tracks').insert(rows);
@@ -122,12 +140,12 @@ async function saveCollection(userId, url, title, tracks) {
 
 async function getCollections(userId) {
   if (useLocal) {
-    const cols = query("SELECT id, user_id, url, title, cover_url, updated_at FROM collections WHERE user_id = ? ORDER BY updated_at DESC", [userId]);
+    const cols = query("SELECT id, user_id, url, title, cover_url, type, updated_at FROM collections WHERE user_id = ? ORDER BY updated_at DESC", [userId]);
     return cols.map(r => {
       const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [r[0]]);
       const pr = query("SELECT track_index, current_time, completed FROM progress WHERE user_id = ? AND collection_id = ?", [userId, r[0]]);
       return {
-        id: r[0], user_id: r[1], url: r[2], title: r[3], cover_url: r[4], updated_at: r[5],
+        id: r[0], user_id: r[1], url: r[2], title: r[3], cover_url: r[4], type: r[5] || 'music', updated_at: r[6],
         tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7], transcript: t[8] })),
         trackIndex: pr[0]?.[0] || 0, currentTime: pr[0]?.[1] || 0, completed: pr[0]?.[2] || 0,
       };
@@ -146,18 +164,28 @@ async function getCollections(userId) {
 
 async function getCollection(id) {
   if (useLocal) {
-    const cols = query("SELECT id, user_id, url, title, cover_url, updated_at FROM collections WHERE id = ?", [id]);
+    const cols = query("SELECT id, user_id, url, title, cover_url, type, updated_at FROM collections WHERE id = ?", [id]);
     if (cols.length === 0) return null;
     const r = cols[0];
     const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [id]);
     return {
-      id: r[0], user_id: r[1], url: r[2], title: r[3], cover_url: r[4], updated_at: r[5],
+      id: r[0], user_id: r[1], url: r[2], title: r[3], cover_url: r[4], type: r[5] || 'music', updated_at: r[6],
       tracks: tr.map(t => ({ id: t[0], collection_id: t[1], track_index: t[2], title: t[3], audio_url: t[4], duration: t[5], downloaded: !!t[6], local_filename: t[7], transcript: t[8] })),
     };
   }
   const { data, error } = await supabase.from('collections').select('*, tracks (*)').eq('id', id).single();
   if (error) return null;
   return { ...data, tracks: data.tracks.sort((a, b) => a.track_index - b.track_index) };
+}
+
+async function updateCollection(id, { title, type }) {
+  if (!useLocal) {
+    await supabase.from('collections').update({ title, type }).eq('id', id);
+  } else {
+    if (title !== undefined) db.run("UPDATE collections SET title = ? WHERE id = ?", [title, id]);
+    if (type !== undefined) db.run("UPDATE collections SET type = ? WHERE id = ?", [type, id]);
+    saveLocalDB();
+  }
 }
 
 async function deleteCollection(id) {
@@ -269,7 +297,7 @@ async function deletePlaylist(id) {
 module.exports = {
   initDB,
   getOrCreateUser, getUser,
-  saveCollection, getCollections, getCollection, deleteCollection, markTrackDownloaded,
+  saveCollection, getCollections, getCollection, updateCollection, deleteCollection, markTrackDownloaded,
   saveProgress, getProgress,
   createPlaylist, getPlaylists, getPlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist
 };

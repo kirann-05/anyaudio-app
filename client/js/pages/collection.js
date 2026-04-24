@@ -63,8 +63,14 @@ function buildUI(container, col, progress) {
       </div>
     </div>
     <div style="flex:1;">
-      <div style="font-size:0.875rem; font-weight:700; text-transform:uppercase; margin-bottom:8px;">Collection</div>
-      <h1 style="font-size:3.5rem; font-weight:900; line-height:1.1; margin-bottom:12px; letter-spacing:-0.04em;">${esc(col.title)}</h1>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+        <div class="badge ${col.type === 'podcast' ? 'badge-success' : ''}" style="text-transform:uppercase;">${col.type || 'music'}</div>
+        <div style="font-size:0.875rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Collection</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <h1 id="collection-title" style="font-size:3.5rem; font-weight:900; line-height:1.1; letter-spacing:-0.04em;">${esc(col.title)}</h1>
+        <button id="btn-rename" class="btn btn-ghost btn-icon" title="Rename">${icons.edit || '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>'}</button>
+      </div>
       <div style="display:flex; align-items:center; gap:8px; font-size:0.875rem; color:var(--text-secondary);">
         <span style="font-weight:700; color:var(--text-primary);">${state.user.username}</span>
         <span>•</span>
@@ -73,6 +79,24 @@ function buildUI(container, col, progress) {
     </div>
   `;
   container.appendChild(header);
+
+  // Rename Logic
+  header.querySelector('#btn-rename').addEventListener('click', async () => {
+    const newTitle = prompt('Rename collection:', col.title);
+    if (newTitle && newTitle !== col.title) {
+      try {
+        await api.updateCollection(col.id, { title: newTitle });
+        col.title = newTitle;
+        document.getElementById('collection-title').textContent = newTitle;
+        document.title = `${newTitle} — AnyAudio`;
+        // Refresh sidebar
+        const { refreshSidebarLibrary } = await import('../components/sidebar.js');
+        refreshSidebarLibrary();
+      } catch (err) {
+        alert('Failed to rename: ' + err.message);
+      }
+    }
+  });
 
   // Play button row
   const actionRow = el('div', { style: { paddingBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px' } });
