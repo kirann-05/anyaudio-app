@@ -2,7 +2,7 @@
  * API Client — communicates with the AnyAudio backend
  */
 
-const BASE = localStorage.getItem('ANYAUDIO_BACKEND_URL') || ''; 
+const BASE = typeof window !== 'undefined' ? (localStorage.getItem('ANYAUDIO_BACKEND_URL') || '') : '';
 
 async function fetchJSON(url: string, options: any = {}) {
   const res = await fetch(`${BASE}${url}`, {
