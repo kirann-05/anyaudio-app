@@ -111,14 +111,28 @@ async function scrapeSpotifyPlaylist(url) {
   
   try {
     const page = await browser.newPage();
-    // Set a common viewport
+    // Use a real browser user agent to avoid "Page not found" / bot detection
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
     
     console.log(`  🌐 Loading Spotify URL: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Try with domcontentloaded first for speed, then wait for content
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    
+    // Wait for the main content to appear (track rows or title)
+    try {
+      await page.waitForSelector('[data-testid="track-row"], [role="row"], .tracklist-row, [data-testid="playlist-tracklist"]', { timeout: 15000 });
+    } catch (e) {
+      console.warn('  ⚠️ Timeout waiting for track rows. Content might be dynamic or restricted.');
+    }
 
-    // Extract Playlist Title
-    const playlistTitle = await page.title().then(t => t.replace(/\| Spotify/gi, '').replace(/- playlist/gi, '').replace(/- album/gi, '').trim());
+    // Try to get title from meta or title tag
+    const playlistTitle = await page.evaluate(() => {
+      return document.querySelector('meta[property="og:title"]')?.content || 
+             document.querySelector('h1')?.innerText || 
+             document.title.replace(/\| Spotify/gi, '').replace(/- playlist/gi, '').replace(/- album/gi, '').trim();
+    });
+    
     console.log(`  📂 Playlist Title: "${playlistTitle}"`);
 
     // Extract Track Titles and Artists
@@ -129,24 +143,35 @@ async function scrapeSpotifyPlaylist(url) {
     });
 
     const trackInfos = await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('[data-testid="track-row"]'));
+      // Try multiple selectors as Spotify often changes their class names
+      const rows = Array.from(document.querySelectorAll('[data-testid="track-row"], [role="row"], .tracklist-row'));
       return rows.map(row => {
-        // Track title is usually in a div with dir="auto" or a specific class
-        const titleEl = row.querySelector('div[dir="auto"]') || row.querySelector('a[href*="/track/"] div');
-        const artistEls = Array.from(row.querySelectorAll('a[href*="/artist/"]'));
+        // Track title: look for specific data-testid or common link patterns
+        const titleEl = row.querySelector('[data-testid="internal-track-link"] div, div[dir="auto"], .tracklist-name, a[href*="/track/"] div');
+        const artistEls = Array.from(row.querySelectorAll('a[href*="/artist/"], .tracklist-row__artist-name-link'));
         
+        const title = titleEl?.innerText?.trim();
+        if (!title) return null; // Skip non-track rows
+
         return {
-          title: titleEl?.innerText?.trim() || 'Unknown Track',
+          title: title,
           artists: artistEls.map(a => a.innerText.trim()).join(', ') || 'Unknown Artist'
         };
-      });
+      }).filter(Boolean);
     });
 
-    await browser.close();
-
     if (trackInfos.length === 0) {
+      console.log('  ⚠️ No tracks found via Puppeteer selectors. Checking HTML directly...');
+      const html = await page.content();
+      await browser.close();
+      
+      if (html.includes('login-button')) {
+        throw new Error('Spotify is blocking the scraper with a login wall. Try a different playlist or a YouTube playlist instead.');
+      }
       throw new Error('No tracks found in this Spotify playlist/album.');
     }
+
+    await browser.close();
 
     console.log(`  ✅ Found ${trackInfos.length} tracks. Resolving via YouTube...`);
 
