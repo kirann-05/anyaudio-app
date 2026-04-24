@@ -59,6 +59,12 @@ async function initDB() {
   try { db.run("ALTER TABLE collections ADD COLUMN cover_url TEXT"); } catch(e) {}
   try { db.run("ALTER TABLE collections ADD COLUMN type TEXT DEFAULT 'music'"); } catch(e) {}
   
+  // CLEAN SLATE MIGRATION: Wipe all cover art to restore default placeholders
+  try {
+    db.run("UPDATE collections SET cover_url = ''");
+    console.log('🧹 Library purged: Restored default placeholders.');
+  } catch (e) { console.warn('Migration skipped:', e.message); }
+  
   saveLocalDB();
   console.log('✅ Connected to Local SQLite');
 }
@@ -110,7 +116,8 @@ async function getUser(id) {
 // ===================== COLLECTIONS =====================
 async function saveCollection(userId, url, title, tracks) {
   const colId = genId();
-  const coverUrl = tracks[0]?.coverUrl || null;
+  // FORCE DEFAULT: No cover art allowed
+  const coverUrl = null;
   // Logic: podcast if tracks are long or have transcripts
   const avgDuration = tracks.length > 0 ? tracks.reduce((acc, t) => acc + (t.duration || 0), 0) / tracks.length : 0;
   const isLongForm = avgDuration > 600; // Average > 10 mins
