@@ -30,7 +30,7 @@ export default function App() {
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
-  const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [trendingArtists, setTrendingArtists] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [isHomeLoading, setIsHomeLoading] = useState(false);

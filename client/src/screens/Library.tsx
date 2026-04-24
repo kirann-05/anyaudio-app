@@ -223,12 +223,23 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
       
       {processedCollections.length === 0 && (
         <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-20 text-on-surface-variant"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-32 text-center"
         >
-          <WifiOff size={48} className="mb-4 opacity-20" />
-          <p className="font-mono uppercase tracking-[0.2em]">No matches found in library</p>
+          <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">
+            <WifiOff size={40} className="text-on-surface-variant opacity-40" />
+          </div>
+          <h2 className="font-display text-2xl text-on-surface mb-3 font-bold uppercase tracking-widest">Library is Empty</h2>
+          <p className="font-body text-on-surface-variant max-w-md mb-10">
+            You haven't imported any audio yet. Head over to Discovery or paste a link to start building your collection.
+          </p>
+          <button 
+            onClick={onImport}
+            className="px-8 py-4 rounded-full bg-primary text-on-primary font-mono text-[10px] uppercase tracking-[0.3em] font-bold shadow-2xl hover:scale-105 transition-all"
+          >
+            Start Importing
+          </button>
         </motion.div>
       )}
     </div>
