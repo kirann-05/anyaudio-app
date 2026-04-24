@@ -35,10 +35,15 @@ export function navigate(path) {
 
 // ===================== App Shell Setup =====================
 let isAppInitialized = false;
+let isRouting = false;
 
 async function handleRoute() {
-  const route = getRoute();
-  const root = document.getElementById('app');
+  if (isRouting) return;
+  isRouting = true;
+  
+  try {
+    const route = getRoute();
+    const root = document.getElementById('app');
 
   // Check auth — validate stored session against backend
   if (!state.user) {
@@ -217,6 +222,12 @@ async function handleRoute() {
       await renderLanding(contentArea);
       break;
   }
+  
+  isRouting = false;
+} catch (err) {
+  console.error('Routing error:', err);
+  isRouting = false;
+}
 }
 
 // ===================== Login Modal =====================
