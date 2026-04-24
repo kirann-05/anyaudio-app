@@ -22,20 +22,6 @@ async function fetchJSON(url: string, options: any = {}) {
 }
 
 // ===================== User =====================
-export async function deleteCollection(id: string) {
-  const response = await fetch(`${BASE}/api/collection/${id}`, {
-    method: 'DELETE',
-  });
-  return response.json();
-}
-
-export async function deletePlaylist(id: string) {
-  const response = await fetch(`${BASE}/api/playlist/${id}`, {
-    method: 'DELETE',
-  });
-  return response.json();
-}
-
 export async function login(username: string) {
   return fetchJSON('/api/user/login', {
     method: 'POST',
@@ -74,6 +60,10 @@ export async function getCollection(id: string) {
 
 export async function deleteCollection(id: string) {
   return fetchJSON(`/api/collection/${id}`, { method: 'DELETE' });
+}
+
+export async function deletePlaylist(id: string) {
+  return fetchJSON(`/api/playlist/${id}`, { method: 'DELETE' });
 }
 
 export async function updateCollection(id: string, data: any) {
