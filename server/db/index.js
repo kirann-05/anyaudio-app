@@ -113,11 +113,17 @@ async function getUser(id) {
   return error ? null : data;
 }
 
-// ===================== COLLECTIONS =====================
-async function saveCollection(userId, url, title, tracks) {
   const colId = genId();
-  // FORCE DEFAULT: No cover art allowed
-  const coverUrl = null;
+  
+  // PRO ARTWORK ENGINE: Search iTunes for official artist covers
+  let coverUrl = null;
+  try {
+    const { getOfficialArt } = require('../utils/coverArt');
+    coverUrl = await getOfficialArt(title);
+    if (coverUrl) console.log(`  🎨 Official Art Found: ${coverUrl}`);
+  } catch (e) {
+    console.warn('  ⚠️ Artwork discovery failed, staying default.');
+  }
   // Logic: podcast if tracks are long or have transcripts
   const avgDuration = tracks.length > 0 ? tracks.reduce((acc, t) => acc + (t.duration || 0), 0) / tracks.length : 0;
   const isLongForm = avgDuration > 600; // Average > 10 mins
