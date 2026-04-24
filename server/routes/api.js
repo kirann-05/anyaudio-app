@@ -78,6 +78,34 @@ router.get('/search', async (req, res) => {
   }
 });
 
+router.get('/recommendations', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL parameter is required' });
+    
+    const yt = require('youtube-sr').default;
+    // Extract video ID from URL
+    const video = await yt.getVideo(url);
+    if (!video || !video.videos || video.videos.length === 0) {
+      return res.json([]);
+    }
+    
+    // Map the related videos to our standard format
+    const recommendations = video.videos.slice(0, 5).map(v => ({
+      title: v.title,
+      url: `https://www.youtube.com/watch?v=${v.id}`,
+      duration: v.duration / 1000,
+      thumbnail: v.thumbnail?.url,
+      uploader: v.channel?.name || 'Unknown'
+    }));
+    
+    res.json(recommendations);
+  } catch (err) {
+    console.error('Recommendations API error:', err);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
+});
+
 // ===================== Collections =====================
 router.get('/user/:userId/collections', async (req, res) => {
   try {

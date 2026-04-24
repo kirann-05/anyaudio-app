@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@600;700&family=Manrope:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0a0c14;
+  --color-surface: #11131b;
+  --color-surface-bright: #373942;
+  --color-surface-container-lowest: #0c0e16;
+  --color-surface-container-low: #191b24;
+  --color-surface-container: #1d1f28;
+  --color-surface-container-high: #282a32;
+  --color-surface-container-highest: #33343e;
+  --color-on-surface: #e2e1ee;
+  --color-on-surface-variant: #d8c3ad;
+  --color-primary: #ffc174;
+  --color-primary-container: #f59e0b;
+  --color-on-primary: #472a00;
+  --color-secondary: #adc6ff;
+  --color-tertiary: #56e5a9;
+  
+  --font-display: "Epilogue", sans-serif;
+  --font-body: "Manrope", sans-serif;
+  --font-mono: "Space Grotesk", sans-serif;
+  --font-sans: "Inter", sans-serif;
+
+  --radius-xl: 1.5rem;
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface antialiased;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+  }
+  
+  .glass-card {
+    @apply backdrop-blur-lg bg-surface-container/30 border border-white/5;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}

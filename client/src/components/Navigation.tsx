@@ -1,0 +1,103 @@
+import { Menu, Headphones, Search, Library, Crown, User, Settings } from 'lucide-react';
+import { AppTab } from '../types';
+import { motion } from 'motion/react';
+
+interface NavigationProps {
+  activeTab: AppTab;
+  onTabChange: (tab: AppTab) => void;
+}
+
+export function Sidebar({ activeTab, onTabChange }: NavigationProps) {
+  const items = [
+    { id: 'listen', icon: Headphones, label: 'Discovery' },
+    { id: 'explore', icon: Search, label: 'Explore' }, // Using Search icon for explore per screenshot visual style
+    { id: 'library', icon: Library, label: 'Library' },
+  ];
+
+  return (
+    <aside className="hidden lg:flex flex-col h-full p-8 fixed top-0 left-0 bg-background text-primary font-display text-base w-80 rounded-r-3xl divide-y divide-white/5 shadow-2xl z-40 border-r border-white/5">
+      <div className="flex items-center gap-4 pb-8">
+        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20">
+           <img 
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80" 
+            alt="User" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div>
+          <div className="text-primary font-bold">Audiophile Member</div>
+          <div className="text-sm text-on-surface-variant">Premium Plan</div>
+        </div>
+      </div>
+
+      <nav className="py-6 flex flex-col gap-2">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onTabChange(item.id as AppTab)}
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 ${
+              activeTab === item.id 
+                ? 'text-primary bg-primary/5 border-l-4 border-primary' 
+                : 'text-on-surface-variant hover:bg-white/5 hover:pl-6'
+            }`}
+          >
+            <item.icon size={24} />
+            <span>{item.label}</span>
+          </button>
+        ))}
+        <button className="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-white/5 hover:pl-6 transition-all duration-300">
+          <Settings size={24} />
+          <span>Settings</span>
+        </button>
+      </nav>
+    </aside>
+  );
+}
+
+export function TopBar() {
+  return (
+    <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center lg:left-80 lg:w-[calc(100%-20rem)]">
+      <div className="flex items-center gap-4">
+        <button className="lg:hidden p-2 text-primary hover:text-primary/80 transition-colors">
+          <Menu size={24} />
+        </button>
+        <h1 className="text-2xl font-bold text-primary tracking-tighter font-display text-glow uppercase">AnyAudio</h1>
+      </div>
+      <div className="flex items-center gap-4">
+        <button className="p-2 text-on-surface-variant hover:text-primary transition-colors">
+           <User size={24} />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+export function BottomNav({ activeTab, onTabChange }: NavigationProps) {
+  const items = [
+    { id: 'listen', icon: Headphones, label: 'Listen' },
+    { id: 'explore', icon: Search, label: 'Explore' },
+    { id: 'library', icon: Library, label: 'Library' },
+    { id: 'search', icon: Crown, label: 'Premium' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 w-full z-50 lg:hidden rounded-t-2xl border-t border-white/10 bg-background/80 backdrop-blur-2xl flex justify-around items-center px-4 pb-6 pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onTabChange(item.id as AppTab)}
+          className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all active:scale-90 ${
+            activeTab === item.id 
+              ? 'text-primary bg-primary/10 scale-110' 
+              : 'text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <item.icon size={24} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+          <span className="font-display text-[10px] font-medium uppercase tracking-widest mt-1">
+            {item.label}
+          </span>
+        </button>
+      ))}
+    </nav>
+  );
+}
