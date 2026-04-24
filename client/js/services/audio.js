@@ -85,6 +85,14 @@ class AudioEngine extends EventTarget {
     this.dispatchEvent(new CustomEvent(type, { detail }));
   }
 
+  on(type, callback) {
+    this.addEventListener(type, callback);
+  }
+
+  off(type, callback) {
+    this.removeEventListener(type, callback);
+  }
+
   /**
    * Load a collection of tracks
    */
