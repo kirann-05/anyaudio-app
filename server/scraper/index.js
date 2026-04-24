@@ -2,6 +2,7 @@ const { scrapeGeneric } = require('./strategies/generic');
 const { scrapeDirect } = require('./strategies/direct');
 const { scrapeStreaming } = require('./strategies/streaming');
 const { scrapeSpotify } = require('./strategies/spotify');
+const { scrapeOshoWorld } = require('./strategies/oshoworld');
 
 // Direct media file extensions
 const MEDIA_EXTENSIONS = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma', '.mp4', '.webm', '.mkv'];
@@ -48,6 +49,11 @@ async function scrape(url) {
     // 2b. Spotify Special Handling
     if (hostname.includes('open.spotify.com')) {
       return await scrapeSpotify(url);
+    }
+
+    // 2c. Osho World Special Handling
+    if (hostname.includes('oshoworld.com')) {
+      return await scrapeOshoWorld(url);
     }
 
     // 3. Generic website (Puppeteer)

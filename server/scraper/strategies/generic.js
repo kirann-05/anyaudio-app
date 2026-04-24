@@ -105,8 +105,11 @@ async function scrapeGeneric(url) {
       }
     });
 
+    // Hardcoded timeout increase for slow domains (Osho World)
+    const timeout = url.includes('oshoworld.com') ? 120000 : 45000;
+
     console.log('  📄 Loading page...');
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout });
 
     // Wait for dynamic audio players to load (many sites inject <audio> via JS)
     await delay(4000);

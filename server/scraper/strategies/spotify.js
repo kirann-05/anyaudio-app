@@ -58,20 +58,32 @@ async function scrapeSpotify(url) {
     const lines = raw.trim().split('\n').filter(Boolean);
     const info = JSON.parse(lines[0]);
 
-    if (!info || !info.url && !info.webpage_url && !info.id) {
-      throw new Error('YouTube search returned no results for this Spotify track');
+    const ytdlpUrl = `ytdlp://${info.url || info.webpage_url || info.id}`;
+    let duration = info.duration || null;
+    let finalTitle = title;
+    let finalAudioUrl = ytdlpUrl;
+
+    // 3. Smart Fallback: If YouTube result is too short for a discourse, try Archive.org
+    const isLikelyLongDiscourse = title.toLowerCase().match(/geeta|gita|discourses|maha|lecture|satsang|osho/);
+    if (isLikelyLongDiscourse && (!duration || duration < 600)) { // Less than 10 mins
+      console.log('  ⚠️ YouTube match is too short for a discourse. Trying Archive.org fallback...');
+      const archiveResult = await searchArchiveOrg(title);
+      if (archiveResult) {
+        console.log(`  🏛️ Found full version on Archive.org: "${archiveResult.title}"`);
+        finalAudioUrl = archiveResult.url;
+        duration = archiveResult.duration || duration;
+        finalTitle = archiveResult.title || finalTitle;
+      }
     }
 
-    const ytdlpUrl = `ytdlp://${info.url || info.webpage_url || info.id}`;
-
     return {
-      title: title,
+      title: finalTitle,
       sourceUrl: url,
       tracks: [{
         id: 0,
-        title: title,
-        audioUrl: ytdlpUrl,
-        duration: info.duration || null,
+        title: finalTitle,
+        audioUrl: finalAudioUrl,
+        duration: duration,
         transcript: null
       }]
     };
@@ -178,6 +190,43 @@ async function scrapeSpotifyPlaylist(url) {
     console.error('  ❌ Spotify Playlist error:', err.message);
     throw new Error('Failed to import Spotify playlist: ' + err.message);
   }
+}
+
+/**
+ * Search Archive.org for a match
+ */
+async function searchArchiveOrg(query) {
+  console.log(`  🏛️ Searching Archive.org for: "${query}"...`);
+  try {
+    const searchUrl = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier,title,mediatype&rows=5&output=json`;
+    const response = await axios.get(searchUrl, { timeout: 10000 });
+    const docs = response.data.response.docs;
+
+    if (!docs || docs.length === 0) return null;
+
+    // Filter for audio/video matches
+    const bestDoc = docs.find(d => d.mediatype === 'audio' || d.mediatype === 'video') || docs[0];
+    
+    // Get metadata for the specific identifier
+    const metadataUrl = `https://archive.org/metadata/${bestDoc.identifier}`;
+    const metaRes = await axios.get(metadataUrl, { timeout: 10000 });
+    const files = metaRes.data.files;
+
+    // Find the best audio file (prefer .mp3 or .mp4)
+    const audioFile = files.find(f => f.name.endsWith('.mp3')) || files.find(f => f.name.endsWith('.mp4'));
+    
+    if (audioFile) {
+      const audioUrl = `https://archive.org/download/${bestDoc.identifier}/${audioFile.name}`;
+      return {
+        title: bestDoc.title,
+        url: audioUrl,
+        duration: audioFile.length ? parseInt(audioFile.length) : null
+      };
+    }
+  } catch (err) {
+    console.warn('  ⚠️ Archive.org search failed:', err.message);
+  }
+  return null;
 }
 
 module.exports = { scrapeSpotify };
