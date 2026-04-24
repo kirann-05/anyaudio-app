@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Mic, Play, Filter, Hash, Sparkles, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Mic, Play, Filter, Hash, Sparkles, Clock, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { EXPLORE_MOCKED_MIXES } from '../constants';
 
@@ -9,48 +9,77 @@ interface DiscoveryProps {
 
 export function DiscoveryScreen({ onImport }: DiscoveryProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const toggleFilter = (filter: string) => {
-    setActiveFilters(prev => 
-      prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
-    );
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!searchQuery.trim()) return;
+    console.log('Searching for:', searchQuery);
+    // In a real app, this would trigger a search API or navigate to a search results page
   };
 
-  const filters_demo = [
-    { label: 'Ambient', icon: Hash },
-    { label: 'Focus', icon: Sparkles },
-    { label: 'Long Form', icon: Clock },
-    { label: 'Electronic', icon: Hash },
-    { label: 'Chill', icon: Sparkles },
-    { label: 'Podcast', icon: Mic }
-  ];
+  const [recommendations, setRecommendations] = useState<any[]>(EXPLORE_MOCKED_MIXES);
+  const [isLoadingRecs, setIsLoadingRecs] = useState(false);
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      setIsLoadingRecs(true);
+      try {
+        const response = await fetch('/api/search?q=lofi%20ambient%20focus');
+        const data = await response.json();
+        if (data && data.length > 0) {
+          // Map backend search results to the mix format
+          const formatted = data.slice(0, 6).map((item: any, idx: number) => ({
+            title: item.title,
+            tag: idx === 0 ? 'RECOMMENDED' : 'TRENDING',
+            description: item.artist || 'Atmospheric soundscape for deep focus.',
+            image: item.coverArt || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
+            url: item.id // Assuming this is the scrape URL or ID
+          }));
+          setRecommendations(formatted);
+        }
+      } catch (err) {
+        console.error('Failed to fetch recommendations:', err);
+      } finally {
+        setIsLoadingRecs(false);
+      }
+    };
+
+    fetchRecs();
+  }, []);
 
   return (
     <div className="flex-1 max-w-7xl mx-auto pt-28 pb-32 md:pb-16 px-6 lg:px-12 w-full">
       {/* Universal Search Bar */}
       <div className="flex flex-col items-center mb-16 gap-6">
-        <div className="relative w-full max-w-3xl group">
+        <form onSubmit={handleSearch} className="relative w-full max-w-3xl group">
           <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-on-surface-variant group-focus-within:text-primary transition-colors">
             <Search size={24} />
           </div>
           <input 
             type="text" 
             placeholder="Search artists, podcasts, or moods..."
-            className="w-full glass-panel rounded-full py-5 pl-16 pr-14 text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)] font-body text-lg"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full glass-panel rounded-full py-5 pl-16 pr-40 text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)] font-body text-lg"
           />
           <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
             <button 
+              type="submit"
+              className="px-4 py-2 rounded-full bg-primary text-on-primary hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all font-mono text-[10px] uppercase tracking-widest font-bold"
+            >
+              Search
+            </button>
+            <button 
+              type="button"
               onClick={onImport}
               className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-mono text-[10px] uppercase tracking-widest font-bold"
             >
               <Play size={14} fill="currentColor" />
               Import
             </button>
-            <button className="p-2 text-on-surface-variant hover:text-white transition-colors">
-              <Mic size={24} />
-            </button>
           </div>
-        </div>
+        </form>
 
         {/* Filter Bar */}
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar max-w-full px-4">
@@ -108,16 +137,19 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
 
       {/* Curated for You */}
       <section>
-        <h2 className="font-display text-2xl text-on-surface mb-8 font-bold tracking-tight">Curated for You</h2>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="font-display text-2xl text-on-surface font-bold tracking-tight">Curated for You</h2>
+          {isLoadingRecs && <Loader2 size={20} className="animate-spin text-primary opacity-50" />}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {EXPLORE_MOCKED_MIXES.map((mix, idx) => (
-            <motion.a 
+          {recommendations.map((mix, idx) => (
+            <motion.div 
               key={idx}
-              href="#"
               whileHover={{ y: -8 }}
               className={`group relative block rounded-3xl overflow-hidden glass-panel transition-all duration-500 ${
                 idx === 2 ? 'md:col-span-2 lg:col-span-1' : ''
-              } aspect-[4/5]`}
+              } aspect-[4/5] cursor-pointer`}
+              onClick={() => mix.url && onImport?.()} // Trigger import for now to show the URL flow
             >
               <img 
                 src={mix.image} 
@@ -130,14 +162,14 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
                 <span className="inline-block px-3 py-1 mb-4 rounded-full bg-white/10 backdrop-blur-md border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
                   {mix.tag}
                 </span>
-                <h3 className="font-display text-3xl text-white mb-3 group-hover:text-primary transition-colors font-bold">
+                <h3 className="font-display text-3xl text-white mb-3 group-hover:text-primary transition-colors font-bold line-clamp-2">
                   {mix.title}
                 </h3>
                 <p className="font-body text-white/60 line-clamp-2">
                   {mix.description}
                 </p>
               </div>
-            </motion.a>
+            </motion.div>
           ))}
         </div>
       </section>
