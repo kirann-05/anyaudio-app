@@ -36,7 +36,7 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
         if (artistsData && artistsData.length > 0) {
           setTrendingArtists(artistsData.slice(0, 6).map((a: any) => ({
             name: a.artist || a.title.split(' - ')[0],
-            image: a.coverArt || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000000)}?auto=format&fit=crop&w=120&h=120&q=80`,
+            image: a.thumbnail || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 1000000000)}?auto=format&fit=crop&w=120&h=120&q=80`,
             url: a.url
           })));
         }
@@ -48,8 +48,8 @@ export function DiscoveryScreen({ onImport }: DiscoveryProps) {
           setRecommendations(musicData.slice(0, 6).map((m: any, idx: number) => ({
             title: m.title,
             tag: idx < 3 ? 'TRENDING' : 'PODCAST',
-            description: m.artist || 'Experience the latest trending sounds.',
-            image: m.coverArt || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
+            description: m.uploader || 'Experience the latest trending sounds.',
+            image: m.thumbnail || `https://images.unsplash.com/photo-${1600000000000 + idx * 1000000}?auto=format&fit=crop&w=800&q=80`,
             url: m.url
           })));
         }
