@@ -127,6 +127,43 @@ function buildUI(container, col, progress) {
 
   actionRow.appendChild(playBtn);
 
+  // Playlist Button
+  const addPlaylistBtn = el('button', { 
+    className: 'btn btn-ghost btn-icon', 
+    title: 'Add all to Playlist',
+    innerHTML: icons.list
+  });
+  addPlaylistBtn.addEventListener('click', async () => {
+    try {
+      const playlists = await api.getPlaylists(state.user.id);
+      let selectedPlaylist = null;
+
+      if (playlists.length === 0) {
+        const name = prompt('You have no playlists. Enter a name to create one:');
+        if (name) {
+          selectedPlaylist = await api.createPlaylist(state.user.id, name);
+        } else return;
+      } else {
+        const pList = playlists.map((p, i) => `${i+1}. ${p.name}`).join('\n');
+        const choice = prompt(`Add all tracks to which playlist? (Enter number):\n${pList}`);
+        if (!choice) return;
+        const idx = parseInt(choice) - 1;
+        selectedPlaylist = playlists[idx];
+      }
+
+      if (selectedPlaylist) {
+        const trackIndices = col.tracks.map(t => t.track_index);
+        await api.addToPlaylist(selectedPlaylist.id, col.id, trackIndices);
+        alert(`Successfully added ${trackIndices.length} tracks to "${selectedPlaylist.name}"`);
+        const { refreshSidebarLibrary } = await import('../components/sidebar.js');
+        refreshSidebarLibrary();
+      }
+    } catch (err) {
+      alert('Failed: ' + err.message);
+    }
+  });
+  actionRow.appendChild(addPlaylistBtn);
+
   // Download button
   const downloadBtn = el('button', { 
     className: 'btn btn-ghost', 
