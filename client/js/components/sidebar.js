@@ -15,8 +15,8 @@ export function renderSidebar() {
   
   homeBtn.addEventListener('click', () => navigate(''));
   searchBtn.addEventListener('click', () => {
-    navigate('');
-    setTimeout(() => document.getElementById('url-input')?.focus(), 100);
+    document.getElementById('global-url-input')?.focus();
+    updateSidebarActiveNav('search');
   });
 
   navList.appendChild(homeBtn);
@@ -95,7 +95,9 @@ function escapeHtml(text) {
 
 export function updateSidebarActiveNav(path) {
   document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
-  if (path === '' || path === 'search') {
+  if (path === '' || path === 'home') {
     document.getElementById('nav-home')?.classList.add('active');
+  } else if (path === 'search') {
+    document.getElementById('nav-search')?.classList.add('active');
   }
 }

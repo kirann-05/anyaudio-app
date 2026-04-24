@@ -165,14 +165,14 @@ async function handleRoute() {
     const updateBNav = (path) => {
       document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
       if (path === '' || path === 'home') document.getElementById('bnav-home')?.classList.add('active');
-      if (path === 'library') document.getElementById('bnav-library')?.classList.add('active');
+      else if (path === 'search') document.getElementById('bnav-search')?.classList.add('active');
+      else if (path === 'library') document.getElementById('bnav-library')?.classList.add('active');
     };
 
     document.getElementById('bnav-home').addEventListener('click', () => { navigate(''); updateBNav(''); });
     document.getElementById('bnav-search').addEventListener('click', () => {
-      navigate('');
-      updateBNav('');
-      setTimeout(() => document.getElementById('global-url-input')?.focus(), 100);
+      document.getElementById('global-url-input')?.focus();
+      updateBNav('search');
     });
     document.getElementById('bnav-library').addEventListener('click', () => { navigate('library'); updateBNav('library'); });
 

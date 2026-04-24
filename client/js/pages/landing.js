@@ -20,9 +20,13 @@ export async function renderLanding(container) {
   const recentHeader = el('div', {
     style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' },
   });
-  recentHeader.innerHTML = `
-    <h2 class="title-xl" style="margin:0;">Good evening</h2>
-  `;
+  
+  const hour = new Date().getHours();
+  let greeting = 'Good evening';
+  if (hour < 12) greeting = 'Good morning';
+  else if (hour < 17) greeting = 'Good afternoon';
+  
+  recentHeader.innerHTML = `<h2 class="title-xl" style="margin:0;">${greeting}</h2>`;
   recentSection.appendChild(recentHeader);
 
   const collectionsGrid = el('div', { className: 'collections-grid', id: 'collections-grid' });
