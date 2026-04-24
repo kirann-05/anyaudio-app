@@ -115,9 +115,10 @@ async function loadCollections(grid) {
         <div class="card-image-wrap" style="background: none; border: none; padding: 0; box-shadow: none;">
           <div class="premium-cover">
             ${col.cover_url 
-              ? `<img src="${col.cover_url}" alt="${escapeHtml(col.title)}">` 
-              : `<div class="premium-cover-fallback"><span>${col.title.charAt(0).toUpperCase()}</span></div>`
+              ? `<img src="${col.cover_url}" alt="${escapeHtml(col.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` 
+              : ''
             }
+            <div class="premium-cover-fallback" style="${col.cover_url ? 'display:none;' : ''}"><span>${col.title.charAt(0).toUpperCase()}</span></div>
             <div class="card-play-btn" style="position:absolute; top:50%; left:50%;">${icons.play}</div>
           </div>
         </div>

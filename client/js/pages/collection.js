@@ -56,9 +56,10 @@ function buildUI(container, col, progress) {
     <div style="width:192px; height:192px;">
       <div class="premium-cover" style="box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
         ${col.cover_url 
-          ? `<img src="${col.cover_url}" alt="${esc(col.title)}">` 
-          : `<div class="premium-cover-fallback"><span>${col.title.charAt(0).toUpperCase()}</span></div>`
+          ? `<img src="${col.cover_url}" alt="${esc(col.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` 
+          : ''
         }
+        <div class="premium-cover-fallback" style="${col.cover_url ? 'display:none;' : ''}"><span>${col.title.charAt(0).toUpperCase()}</span></div>
       </div>
     </div>
     <div style="flex:1;">

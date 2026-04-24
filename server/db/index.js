@@ -122,7 +122,7 @@ async function saveCollection(userId, url, title, tracks) {
 
 async function getCollections(userId) {
   if (useLocal) {
-    const cols = query("SELECT id, user_id, url, title, updated_at FROM collections WHERE user_id = ? ORDER BY updated_at DESC", [userId]);
+    const cols = query("SELECT id, user_id, url, title, cover_url, updated_at FROM collections WHERE user_id = ? ORDER BY updated_at DESC", [userId]);
     return cols.map(r => {
       const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [r[0]]);
       const pr = query("SELECT track_index, current_time, completed FROM progress WHERE user_id = ? AND collection_id = ?", [userId, r[0]]);
@@ -146,7 +146,7 @@ async function getCollections(userId) {
 
 async function getCollection(id) {
   if (useLocal) {
-    const cols = query("SELECT id, user_id, url, title, updated_at FROM collections WHERE id = ?", [id]);
+    const cols = query("SELECT id, user_id, url, title, cover_url, updated_at FROM collections WHERE id = ?", [id]);
     if (cols.length === 0) return null;
     const r = cols[0];
     const tr = query("SELECT id, collection_id, track_index, title, audio_url, duration, downloaded, local_filename, transcript FROM tracks WHERE collection_id = ? ORDER BY track_index", [id]);
