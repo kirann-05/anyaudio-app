@@ -3,8 +3,9 @@
  * Wraps HTML5 <audio> element with events, auto-advance, and controls
  */
 
-import { getStreamUrl } from './api.js';
+import { getStreamUrl, search, scrape } from './api.js';
 import { fsService } from './fs.js';
+import { showToast } from '../utils/dom.js';
 
 class AudioEngine extends EventTarget {
   constructor() {
@@ -18,6 +19,8 @@ class AudioEngine extends EventTarget {
     this.isPlaying = false;
     this.collectionId = null;
     this.collectionTitle = '';
+    this.queue = []; // Explicit queue for "Play Next"
+    this.isAutoplayEnabled = true;
 
     this._bindEvents();
   }
@@ -169,11 +172,61 @@ class AudioEngine extends EventTarget {
   next() {
     if (this.currentIndex < this.tracks.length - 1) {
       this.loadTrack(this.currentIndex + 1);
+    } else if (this.queue.length > 0) {
+      const nextTrack = this.queue.shift();
+      this.tracks.push(nextTrack);
+      this.loadTrack(this.tracks.length - 1);
+      this.emit('queueupdate', { queue: this.queue });
+    } else if (this.isAutoplayEnabled) {
+      this.autoplayNext();
     } else {
       // End of playlist
       this.pause();
       this.emit('playlistended');
     }
+  }
+
+  async autoplayNext() {
+    const lastTrack = this.currentTrack;
+    if (!lastTrack) return;
+
+    console.log('🎵 Autoplay: Finding recommendations for', lastTrack.title);
+    this.emit('loading', { loading: true });
+    
+    try {
+      // Search for similar music based on the current title
+      const searchResults = await search(lastTrack.title);
+      // Pick the second or third result to avoid just playing the same song again
+      const recommendation = searchResults[1] || searchResults[0];
+      
+      if (recommendation) {
+        showToast(`Autoplay: ${recommendation.title}`, 'info');
+        // Scrape and add to current session
+        const collection = await scrape(recommendation.url, 'system'); // System-level user for temp imports
+        if (collection && collection.tracks.length > 0) {
+          const newTrack = collection.tracks[0];
+          this.tracks.push(newTrack);
+          this.loadTrack(this.tracks.length - 1);
+        }
+      }
+    } catch (err) {
+      console.error('Autoplay failed:', err);
+      this.pause();
+    } finally {
+      this.emit('loading', { loading: false });
+    }
+  }
+
+  addToQueue(track) {
+    this.queue.push(track);
+    this.emit('queueupdate', { queue: this.queue });
+    showToast('Added to queue', 'success');
+  }
+
+  playNext(track) {
+    this.queue.unshift(track);
+    this.emit('queueupdate', { queue: this.queue });
+    showToast('Will play next', 'success');
   }
 
   previous() {
