@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from 'motion/react';
 interface LibraryProps {
   collections?: Collection[];
   onCollectionSelect: (collection: Collection) => void;
+  onImport?: () => void;
 }
 
 type SortOption = 'title' | 'artist' | 'date';
 
-export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSelect }: LibraryProps) {
+export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSelect, onImport }: LibraryProps) {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('title');
   const [filterQuery, setFilterQuery] = useState('');
@@ -83,7 +84,10 @@ export function LibraryScreen({ collections = MOCK_COLLECTIONS, onCollectionSele
             </button>
           </div>
           
-          <button className="flex items-center gap-2 px-6 py-3 rounded-full glass-panel hover:bg-white/10 hover:scale-105 transition-all text-on-surface font-mono text-sm uppercase tracking-widest border border-white/10">
+          <button 
+            onClick={onImport}
+            className="flex items-center gap-2 px-6 py-3 rounded-full glass-panel hover:bg-white/10 hover:scale-105 transition-all text-on-surface font-mono text-sm uppercase tracking-widest border border-white/10"
+          >
             <Download size={18} />
             Import
           </button>

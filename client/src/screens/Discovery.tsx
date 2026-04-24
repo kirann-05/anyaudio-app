@@ -3,7 +3,11 @@ import { Search, Mic, Play, Filter, Hash, Sparkles, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 import { EXPLORE_MOCKED_MIXES } from '../constants';
 
-export function DiscoveryScreen() {
+interface DiscoveryProps {
+  onImport?: () => void;
+}
+
+export function DiscoveryScreen({ onImport }: DiscoveryProps) {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
   const toggleFilter = (filter: string) => {
@@ -35,7 +39,10 @@ export function DiscoveryScreen() {
             className="w-full glass-panel rounded-full py-5 pl-16 pr-14 text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)] font-body text-lg"
           />
           <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
-            <button className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-mono text-[10px] uppercase tracking-widest font-bold">
+            <button 
+              onClick={onImport}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-mono text-[10px] uppercase tracking-widest font-bold"
+            >
               <Play size={14} fill="currentColor" />
               Import
             </button>

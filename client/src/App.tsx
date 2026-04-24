@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Sidebar, TopBar, BottomNav } from './components/Navigation';
 import { PlayerPreview } from './components/PlayerPreview';
@@ -13,6 +8,7 @@ import { CollectionDetailScreen } from './screens/CollectionDetail';
 import { PlayerScreen } from './screens/Player';
 import { LoginScreen } from './screens/Login';
 import { ProfileScreen } from './screens/Profile';
+import { ImportModal } from './components/ImportModal';
 import { AppTab, Collection, Track, UserStats } from './types';
 import { MOCK_COLLECTIONS } from './constants';
 
@@ -31,11 +27,11 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null); 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   const [collections, setCollections] = useState<Collection[]>(MOCK_COLLECTIONS);
   
-  // Link to backend
-  useEffect(() => {
+  const fetchCollections = useCallback(() => {
     if (!isLoggedIn) return;
     import('./services/api').then(({ getCollections }) => {
       getCollections('user123').then((data: any) => {
@@ -43,6 +39,11 @@ export default function App() {
       }).catch(console.error);
     });
   }, [isLoggedIn]);
+
+  // Link to backend
+  useEffect(() => {
+    fetchCollections();
+  }, [fetchCollections]);
 
   const handleLogin = (name: string) => {
     setUserName(name);
@@ -80,6 +81,12 @@ export default function App() {
     import('./services/audioEngine').then(({ audioEngine }) => {
       audioEngine.togglePlay();
     });
+  };
+
+  const handleImport = async (url: string) => {
+    const { scrape } = await import('./services/api');
+    await scrape(url, 'user123');
+    fetchCollections(); // Refresh list after import
   };
 
   // Sync state with audio engine
@@ -132,9 +139,19 @@ export default function App() {
               exit={{ opacity: 0, scale: 1.02 }}
               className="flex-1"
             >
-              {activeTab === 'library' && <LibraryScreen collections={collections} onCollectionSelect={handleCollectionSelect} />}
-              {activeTab === 'listen' && <DiscoveryScreen />}
-              {activeTab === 'explore' && <DiscoveryScreen />} {/* Reusing discovery for demo */}
+              {activeTab === 'library' && (
+                <LibraryScreen 
+                  collections={collections} 
+                  onCollectionSelect={handleCollectionSelect} 
+                  onImport={() => setIsImportModalOpen(true)}
+                />
+              )}
+              {activeTab === 'listen' && (
+                <DiscoveryScreen onImport={() => setIsImportModalOpen(true)} />
+              )}
+              {activeTab === 'explore' && (
+                <DiscoveryScreen onImport={() => setIsImportModalOpen(true)} />
+              )}
               {activeTab === 'search' && (
                 <div className="flex-1 flex items-center justify-center p-12 text-on-surface-variant font-mono uppercase tracking-[0.3em]">
                   Premium Features Coming Soon
@@ -160,6 +177,12 @@ export default function App() {
       />
 
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+
+      <ImportModal 
+        isOpen={isImportModalOpen} 
+        onClose={() => setIsImportModalOpen(false)} 
+        onImport={handleImport}
+      />
 
       <AnimatePresence>
         {isPlayerOpen && currentTrack && (
