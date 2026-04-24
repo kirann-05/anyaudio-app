@@ -39,11 +39,10 @@ AnyAudio is a high-performance, multi-source media aggregation platform designed
     - **Transcripts**: Integrated right-sidebar for long-form content reading during playback.
     - **Progress Tracking**: Per-track and per-collection progress indicators.
 
-## 5. Next-Level Goals (Engineering Opportunities)
-- **Library Management**: Implementing renaming, deletion, and bulk organization.
-- **Content Categorization**: Differentiating "Podcasts/Discourses" (with speed controls and transcripts) from "Music" (with visualizers and seamless transitions).
-- **UX Refinement**: Improving the "Paste Link" flow with progressive loading states and real-time socket updates for large playlist imports.
-- **Visual Polish**: Advanced micro-interactions, spring-based animations, and a more cinematic hero section.
+## 5. Engineering Focus
+- **Robust Scrapers**: Maintaining high-stealth Puppeteer and yt-dlp configurations.
+- **Hybrid DB**: Ensuring seamless SQLite-to-Supabase synchronization.
+- **Audio Reliability**: Optimizing stream proxy and offline file management.
 
 ---
 *Prepared by Antigravity (Advanced Agentic Coding).*

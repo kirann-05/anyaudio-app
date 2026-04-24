@@ -111,7 +111,13 @@ async function getUser(id) {
 async function saveCollection(userId, url, title, tracks) {
   const colId = genId();
   const coverUrl = tracks[0]?.coverUrl || null;
-  const colType = (tracks.some(t => t.transcript) || title.toLowerCase().includes('podcast') || title.toLowerCase().includes('discourse')) ? 'podcast' : 'music';
+  // Logic: podcast if tracks are long or have transcripts
+  const avgDuration = tracks.length > 0 ? tracks.reduce((acc, t) => acc + (t.duration || 0), 0) / tracks.length : 0;
+  const isLongForm = avgDuration > 600; // Average > 10 mins
+  const hasTranscripts = tracks.some(t => t.transcript && t.transcript.length > 200);
+  const keywords = title.toLowerCase().match(/podcast|discourse|lecture|satsang|osho|geeta|gita|maha/);
+  
+  const colType = (isLongForm || hasTranscripts || keywords) ? 'podcast' : 'music';
 
   if (useLocal) {
     db.run("INSERT INTO collections (id, user_id, url, title, cover_url, type, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -294,10 +300,20 @@ async function deletePlaylist(id) {
   await supabase.from('playlists').delete().eq('id', id);
 }
 
+async function updatePlaylist(id, { name, description }) {
+  if (!useLocal) {
+    await supabase.from('playlists').update({ name, description }).eq('id', id);
+  } else {
+    if (name !== undefined) db.run("UPDATE playlists SET name = ? WHERE id = ?", [name, id]);
+    if (description !== undefined) db.run("UPDATE playlists SET description = ? WHERE id = ?", [description, id]);
+    saveLocalDB();
+  }
+}
+
 module.exports = {
   initDB,
   getOrCreateUser, getUser,
   saveCollection, getCollections, getCollection, updateCollection, deleteCollection, markTrackDownloaded,
   saveProgress, getProgress,
-  createPlaylist, getPlaylists, getPlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist
+  createPlaylist, getPlaylists, getPlaylist, updatePlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist
 };

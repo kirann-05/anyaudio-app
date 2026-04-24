@@ -19,7 +19,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/api', apiRoutes);
 
 // --------------- Static Frontend (Production) ---------------
-const publicPath = path.join(__dirname, 'public');
+const publicPath = path.join(__dirname, '../client/dist');
 app.use(express.static(publicPath));
 
 app.get('*', (req, res) => {

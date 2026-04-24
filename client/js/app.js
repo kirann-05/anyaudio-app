@@ -109,6 +109,24 @@ async function handleRoute() {
     const playerBar = renderPlayerBar();
     appGrid.appendChild(playerBar);
 
+    // Bottom Nav (Mobile Only)
+    const bottomNav = el('div', { id: 'bottom-nav' });
+    bottomNav.innerHTML = `
+      <div class="bottom-nav-item active" id="bnav-home">
+        ${icons.home}
+        <span>Home</span>
+      </div>
+      <div class="bottom-nav-item" id="bnav-search">
+        ${icons.search}
+        <span>Search</span>
+      </div>
+      <div class="bottom-nav-item" id="bnav-library">
+        ${icons.library}
+        <span>Library</span>
+      </div>
+    `;
+    appGrid.appendChild(bottomNav);
+
     root.appendChild(appGrid);
     isAppInitialized = true;
 
@@ -133,12 +151,28 @@ async function handleRoute() {
     streamBtn.addEventListener('click', () => triggerScrape(false));
     downloadBtn.addEventListener('click', () => triggerScrape(true));
 
+    // Bottom Nav handlers
+    const updateBNav = (path) => {
+      document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+      if (path === '' || path === 'home') document.getElementById('bnav-home')?.classList.add('active');
+      if (path === 'library') document.getElementById('bnav-library')?.classList.add('active');
+    };
+
+    document.getElementById('bnav-home').addEventListener('click', () => { navigate(''); updateBNav(''); });
+    document.getElementById('bnav-search').addEventListener('click', () => {
+      navigate('');
+      updateBNav('');
+      setTimeout(() => document.getElementById('global-url-input')?.focus(), 100);
+    });
+    document.getElementById('bnav-library').addEventListener('click', () => { navigate('library'); updateBNav('library'); });
+
     // Folder connection button in header
     const folderBtn = document.getElementById('connect-folder-header-btn');
     folderBtn.addEventListener('click', async () => {
       const success = await fsService.promptForDirectory();
       if (success) {
-        showToast('Library folder connected!', 'success');
+        // showToast is assumed to be global or imported
+        alert('Library folder connected!');
       }
     });
   }

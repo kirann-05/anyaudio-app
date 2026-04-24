@@ -66,4 +66,36 @@ async function scrape(url) {
   }
 }
 
-module.exports = { scrape };
+async function search(query) {
+  console.log(`  🔍 Global Search: "${query}"`);
+  const { runYtDlp } = require('./strategies/streaming');
+  
+  try {
+    const raw = await runYtDlp([
+      '--dump-json',
+      '--flat-playlist',
+      '--no-warnings',
+      '--no-check-certificates',
+      `ytsearch10:${query}`
+    ], 30000);
+    
+    const lines = raw.trim().split('\n').filter(Boolean);
+    return lines.map(line => {
+      try {
+        const info = JSON.parse(line);
+        return {
+          title: info.title,
+          url: info.webpage_url || `https://www.youtube.com/watch?v=${info.id}`,
+          duration: info.duration || 0,
+          thumbnail: info.thumbnail || null,
+          uploader: info.uploader || 'Unknown'
+        };
+      } catch { return null; }
+    }).filter(Boolean);
+  } catch (err) {
+    console.error('Search error:', err.message);
+    return [];
+  }
+}
+
+module.exports = { scrape, search };

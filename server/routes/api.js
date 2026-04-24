@@ -7,7 +7,7 @@ const {
   saveProgress, getProgress,
   createPlaylist, getPlaylists, getPlaylist, addToPlaylist, removeFromPlaylist, deletePlaylist,
 } = require('../db');
-const { scrape } = require('../scraper');
+const { scrape, search } = require('../scraper');
 
 // ===================== Health =====================
 router.get('/health', (req, res) => {
@@ -63,6 +63,18 @@ router.post('/scrape', async (req, res) => {
   } catch (err) {
     console.error('Scrape error:', err);
     res.status(500).json({ error: 'Failed to scrape URL: ' + err.message });
+  }
+});
+
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
+    const results = await search(q);
+    res.json(results);
+  } catch (err) {
+    console.error('Search API error:', err);
+    res.status(500).json({ error: 'Search failed' });
   }
 });
 
