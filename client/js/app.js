@@ -56,10 +56,12 @@ async function handleRoute() {
         // Session is stale or user doesn't exist
         storage.clearSession();
         renderLoginModal(root);
+        isRouting = false;
         return;
       }
     } else {
       renderLoginModal(root);
+      isRouting = false;
       return;
     }
   }

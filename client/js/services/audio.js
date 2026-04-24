@@ -201,8 +201,9 @@ class AudioEngine extends EventTarget {
       
       if (recommendation) {
         showToast(`Autoplay: ${recommendation.title}`, 'info');
-        // Scrape and add to current session
-        const collection = await scrape(recommendation.url, 'system'); // System-level user for temp imports
+        const { state } = await import('../app.js');
+        const userId = state.user?.id || 'anonymous';
+        const collection = await scrape(recommendation.url, userId);
         if (collection && collection.tracks.length > 0) {
           const newTrack = collection.tracks[0];
           this.tracks.push(newTrack);
