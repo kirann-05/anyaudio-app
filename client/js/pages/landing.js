@@ -112,11 +112,16 @@ async function loadCollections(grid) {
       const card = el('div', { className: 'card' });
 
       card.innerHTML = `
-        <div class="card-image-wrap">
-          ${icons.music}
-          <div class="card-play-btn">${icons.play}</div>
+        <div class="card-image-wrap" style="background: none; border: none; padding: 0; box-shadow: none;">
+          <div class="premium-cover">
+            ${col.cover_url 
+              ? `<img src="${col.cover_url}" alt="${escapeHtml(col.title)}">` 
+              : `<div class="premium-cover-fallback"><span>${col.title.charAt(0).toUpperCase()}</span></div>`
+            }
+            <div class="card-play-btn" style="position:absolute; top:50%; left:50%;">${icons.play}</div>
+          </div>
         </div>
-        <div class="card-title">${escapeHtml(col.title)}</div>
+        <div class="card-title" style="margin-top:12px;">${escapeHtml(col.title)}</div>
         <div class="card-subtitle">Collection • ${col.tracks?.length || 0} tracks</div>
       `;
 

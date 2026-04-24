@@ -81,6 +81,7 @@ async function scrapeStreaming(url) {
         title: e.title || `Track ${i + 1}`,
         audioUrl: `ytdlp://${e.url || e.webpage_url || e.id}`,
         duration: e.duration || null,
+        coverUrl: e.thumbnail || null
       }));
     } else {
       // Single video — get full info with formats
@@ -91,6 +92,7 @@ async function scrapeStreaming(url) {
         title: info.title || 'Unknown',
         audioUrl: `ytdlp://${url}`,
         duration: info.duration || null,
+        coverUrl: info.thumbnail || null
       }];
     }
 

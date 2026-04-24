@@ -149,9 +149,22 @@ async function scrapeGeneric(url) {
     console.log(`  🔊 Live DOM audio sources: ${resolvedLiveSources.length}`);
 
     // Now parse static HTML with cheerio for <a> links
-    const html = await page.content();
     const pageTitle = await page.title();
     const $ = cheerio.load(html);
+    
+    // 1. Scalable Metadata: JSON-LD (Schema.org)
+    let ldData = null;
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const data = JSON.parse($(el).html());
+        if (data['@type'] === 'PodcastEpisode' || data['@type'] === 'AudioObject' || data.itemListElement) {
+          ldData = data;
+        }
+      } catch {}
+    });
+
+    const coverUrl = ldData?.image || ldData?.thumbnailUrl || $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content') || null;
+    const resolvedCover = coverUrl ? (coverUrl.startsWith('http') ? coverUrl : new URL(coverUrl, url).href) : null;
 
     const domLinkUrls = extractMediaLinksFromDOM($, url);
     console.log(`  🔗 DOM link media: ${domLinkUrls.length}`);
@@ -230,9 +243,10 @@ async function scrapeGeneric(url) {
       return true;
     }).map((t, i) => ({ ...t, id: i }));
 
-    // Assign transcript to the first track
-    if (tracks.length > 0 && transcript) {
-      tracks[0].transcript = transcript;
+    // Assign transcript and cover to tracks
+    if (tracks.length > 0) {
+      if (transcript) tracks[0].transcript = transcript;
+      tracks.forEach(t => t.coverUrl = resolvedCover);
     }
 
     await browser.close();

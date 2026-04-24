@@ -20,6 +20,10 @@ async function scrapeOshoWorld(url) {
     
     const title = $('title').text().replace(/\| Osho World/gi, '').trim() || 'Osho Discourse';
     
+    // Extract first large image as cover
+    const coverUrl = $('article img').first().attr('src') || $('img').first().attr('src') || null;
+    const resolvedCover = coverUrl ? (coverUrl.startsWith('http') ? coverUrl : new URL(coverUrl, url).href) : null;
+    
     // Osho World lists often have links to .mp3 files
     const tracks = [];
     $('a').each((i, el) => {
@@ -31,6 +35,7 @@ async function scrapeOshoWorld(url) {
           title: trackTitle,
           audioUrl: href.startsWith('http') ? href : new URL(href, url).href,
           duration: null,
+          coverUrl: resolvedCover,
           transcript: null
         });
       }

@@ -53,8 +53,13 @@ function buildUI(container, col, progress) {
   const header = el('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '24px', paddingBottom: '24px', marginBottom: '24px', borderBottom: '1px solid var(--glass-border)' } });
   
   header.innerHTML = `
-    <div style="width:192px; height:192px; background:var(--bg-elevated); border-radius:var(--radius-md); box-shadow:0 8px 24px rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; color:var(--accent);">
-      <div style="width:80px;height:80px;">${icons.music}</div>
+    <div style="width:192px; height:192px;">
+      <div class="premium-cover" style="box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
+        ${col.cover_url 
+          ? `<img src="${col.cover_url}" alt="${esc(col.title)}">` 
+          : `<div class="premium-cover-fallback"><span>${col.title.charAt(0).toUpperCase()}</span></div>`
+        }
+      </div>
     </div>
     <div style="flex:1;">
       <div style="font-size:0.875rem; font-weight:700; text-transform:uppercase; margin-bottom:8px;">Collection</div>

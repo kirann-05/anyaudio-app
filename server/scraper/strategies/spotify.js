@@ -15,12 +15,14 @@ async function scrapeSpotify(url) {
 
   console.log('  🟢 Spotify track link detected. Fetching metadata via oEmbed...');
   let title = '';
+  let coverUrl = null;
   
   try {
     // 1. Fetch metadata via Spotify's public oEmbed endpoint
     const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`;
     const response = await axios.get(oembedUrl, { timeout: 10000 });
     title = response.data.title;
+    coverUrl = response.data.thumbnail_url || null;
   } catch (err) {
     console.log('  🟡 oEmbed failed. Falling back to Puppeteer to extract title...');
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
@@ -84,6 +86,7 @@ async function scrapeSpotify(url) {
         title: finalTitle,
         audioUrl: finalAudioUrl,
         duration: duration,
+        coverUrl: coverUrl,
         transcript: null
       }]
     };
@@ -167,6 +170,7 @@ async function scrapeSpotifyPlaylist(url) {
             title: `${info.title} - ${info.artists}`,
             audioUrl: `ytdlp://${ytInfo.url || ytInfo.webpage_url || ytInfo.id}`,
             duration: ytInfo.duration || null,
+            coverUrl: ytInfo.thumbnail || null,
             transcript: null
           };
         } catch (err) {
@@ -220,7 +224,8 @@ async function searchArchiveOrg(query) {
       return {
         title: bestDoc.title,
         url: audioUrl,
-        duration: audioFile.length ? parseInt(audioFile.length) : null
+        duration: audioFile.length ? parseInt(audioFile.length) : null,
+        coverUrl: `https://archive.org/services/img/${bestDoc.identifier}`
       };
     }
   } catch (err) {
