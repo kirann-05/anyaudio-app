@@ -37,11 +37,15 @@ export async function getUser(userId) {
 }
 
 // ===================== Scrape =====================
-export async function scrapeUrl(url, userId) {
+export async function scrape(url, userId) {
   return fetchJSON('/api/scrape', {
     method: 'POST',
     body: JSON.stringify({ url, userId }),
   });
+}
+
+export async function search(q) {
+  return fetchJSON(`/api/search?q=${encodeURIComponent(q)}`);
 }
 
 // ===================== Collections =====================

@@ -14,6 +14,7 @@ import { renderRightPanel } from './components/rightPanel.js';
 import { renderLanding } from './pages/landing.js';
 import { renderCollection } from './pages/collection.js';
 import { renderLibrary } from './pages/library.js';
+import { renderSearch } from './pages/search.js';
 
 // ===================== App State =====================
 export const state = {
@@ -138,12 +139,18 @@ async function handleRoute() {
     const profileTrigger = document.getElementById('user-profile-trigger');
 
     const triggerScrape = () => {
-      const url = urlInput.value.trim();
-      const offline = offlineToggle.checked;
-      if (url) {
-        urlInput.value = '';
+      const query = urlInput.value.trim();
+      if (!query) return;
+
+      urlInput.value = '';
+      
+      // Smart Detector: If it looks like a URL, import it. Otherwise, search it.
+      if (query.startsWith('http://') || query.startsWith('https://')) {
+        const offline = offlineToggle.checked;
         navigate('');
-        setTimeout(() => window.dispatchEvent(new CustomEvent('global-url-submit', { detail: { url, offline } })), 50);
+        setTimeout(() => window.dispatchEvent(new CustomEvent('global-url-submit', { detail: { url: query, offline } })), 50);
+      } else {
+        navigate(`search/${encodeURIComponent(query)}`);
       }
     };
 
@@ -195,6 +202,10 @@ async function handleRoute() {
     case 'library':
       state.currentPage = 'library';
       await renderLibrary(contentArea);
+      break;
+    case 'search':
+      state.currentPage = 'search';
+      await renderSearch(contentArea, decodeURIComponent(route.param));
       break;
     case 'user':
       state.currentPage = 'user';
